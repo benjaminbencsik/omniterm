@@ -1,0 +1,65 @@
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #edf2ff;
+  background: #070b16;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 1100px; min-height: 100vh; background: #070b16; }
+button, input, textarea, select { font: inherit; }
+button { cursor: pointer; }
+
+.app-shell { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+.sidebar { padding: 24px; border-right: 1px solid #202941; background: #0b1020; display: flex; flex-direction: column; gap: 18px; }
+.brand { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
+.brand-mark, .avatar { display: grid; place-items: center; border-radius: 12px; background: linear-gradient(135deg, #7c5cff, #2bc7b6); color: white; font-weight: 800; }
+.brand-mark { width: 42px; height: 42px; font-size: 20px; }
+.brand h1, .topbar h2, .panel h3 { margin: 0; }
+.brand p, .muted, small { color: #8f9bb6; }
+.brand p { margin: 3px 0 0; font-size: 13px; }
+
+.primary-button, .ghost-button { border: 0; border-radius: 10px; padding: 11px 14px; color: white; }
+.primary-button { background: #6f5cff; font-weight: 700; }
+.primary-button:disabled { opacity: .5; cursor: not-allowed; }
+.ghost-button { background: #182138; }
+
+.panel { background: #10172a; border: 1px solid #252f49; border-radius: 14px; padding: 16px; }
+.panel.compact { display: flex; flex-direction: column; gap: 5px; }
+.panel-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.eyebrow { display: block; color: #7f8ca8; font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 5px; }
+.settings { display: grid; gap: 12px; }
+.settings label { display: grid; gap: 6px; color: #aab5cc; font-size: 12px; }
+input, select, textarea { width: 100%; border: 1px solid #2a3552; background: #0a1020; color: #eef2ff; border-radius: 9px; padding: 10px 11px; outline: none; }
+input:focus, textarea:focus { border-color: #7564ff; box-shadow: 0 0 0 3px rgba(117,100,255,.12); }
+.status-card { flex-direction: row !important; align-items: flex-start; margin-top: auto; }
+.status-dot { width: 9px; height: 9px; border-radius: 50%; margin-top: 5px; background: #2bc7b6; box-shadow: 0 0 10px #2bc7b6; }
+.status-dot.error { background: #ff6b7a; box-shadow: 0 0 10px #ff6b7a; }
+
+.workspace-area { padding: 22px 26px 26px; min-width: 0; }
+.topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+.content-grid { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 18px; height: calc(100vh - 104px); }
+.chat-panel { display: grid; grid-template-rows: 1fr auto; min-height: 0; border: 1px solid #202b45; border-radius: 16px; overflow: hidden; background: #0b1120; }
+.messages { overflow: auto; padding: 22px; display: flex; flex-direction: column; gap: 18px; }
+.message { display: grid; grid-template-columns: 38px 1fr; gap: 12px; max-width: 900px; }
+.message.user { margin-left: 64px; }
+.avatar { width: 38px; height: 38px; font-size: 12px; }
+.message.user .avatar { background: #25304b; }
+.message span { color: #8794af; font-size: 12px; font-weight: 700; }
+.message p { margin: 5px 0 0; line-height: 1.6; white-space: pre-wrap; }
+.thinking { color: #9da8bf; padding-left: 50px; }
+.composer { border-top: 1px solid #202b45; padding: 14px; background: #0d1425; }
+.composer textarea { resize: vertical; min-height: 90px; }
+.composer-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; color: #7f8ca8; font-size: 12px; }
+.activity-column { display: flex; flex-direction: column; gap: 14px; overflow: auto; }
+pre { white-space: pre-wrap; padding: 12px; border-radius: 9px; background: #070c17; color: #8fe3d8; min-height: 110px; }
+.badge, .count { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; font-size: 11px; font-weight: 800; }
+.badge { padding: 5px 9px; background: #242e49; color: #aeb8d0; }
+.count { width: 25px; height: 25px; background: #6f5cff; color: white; }
+
+@media (max-width: 1250px) {
+  body { min-width: 900px; }
+  .content-grid { grid-template-columns: 1fr; height: auto; }
+  .activity-column { display: grid; grid-template-columns: repeat(3, 1fr); }
+}
