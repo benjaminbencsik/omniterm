@@ -1,5 +1,6 @@
 name: Build desktop installers
 
+# Updating this workflow triggers a fresh preview build on main.
 on:
   workflow_dispatch:
   push:
