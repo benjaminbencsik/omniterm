@@ -1,0 +1,74 @@
+name: Desktop builds
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - feat/desktop-gui
+    paths:
+      - "apps/desktop/**"
+      - ".github/workflows/desktop-build.yml"
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+            artifact: OmniTerm-Windows
+          - platform: macos-latest
+            artifact: OmniTerm-macOS
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+
+      - name: Install frontend dependencies
+        working-directory: apps/desktop
+        run: npm install
+
+      - name: Build desktop application
+        id: tauri
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: apps/desktop
+          tagName: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
+          releaseName: "OmniTerm ${{ github.ref_name }}"
+          releaseBody: "Download the installer for your operating system. Windows users should use the setup executable. macOS users should use the DMG."
+          releaseDraft: true
+          prerelease: true
+
+      - name: Upload Windows and macOS packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            apps/desktop/src-tauri/target/release/bundle/nsis/*-setup.exe
+            apps/desktop/src-tauri/target/release/bundle/msi/*.msi
+            apps/desktop/src-tauri/target/release/bundle/dmg/*.dmg
+            apps/desktop/src-tauri/target/release/bundle/macos/*.app
+          if-no-files-found: error
+          retention-days: 14
