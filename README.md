@@ -1,87 +1,136 @@
 # OmniTerm
 
-OmniTerm is a local-first coding agent for local models and bring-your-own API providers. The project now includes a Tauri desktop application for Windows and macOS alongside the original Python CLI runtime.
+OmniTerm is a local-first desktop coding agent for local models. It provides Ollama chat, a workspace file browser, text-file previews, a workspace-scoped terminal, and approval prompts for commands that may change your project or system.
 
-> **Development status:** The desktop app currently provides Ollama chat, model and endpoint settings, a native workspace picker, and prepared terminal and approval panels. Filesystem and terminal execution are still being connected to the GUI.
+> **Status:** Early preview. The desktop application is usable, but installers are currently unsigned and the agent does not yet autonomously choose filesystem or terminal tools from chat.
 
-## Recommended installation: desktop app
+## Download the desktop application
 
-End users should not need Python, Node.js, Rust, Git, WSL, or terminal commands.
+You do not need Python, Node.js, Rust, Git, PowerShell, or WSL to use a packaged build.
 
 ### Windows
 
-1. Open the repository's **Releases** page.
-2. Download the Windows setup executable or MSI.
-3. Double-click the installer.
-4. Open OmniTerm from the Start menu or desktop shortcut.
+1. Open the repository's **Actions** page.
+2. Open the newest successful **Desktop builds** run.
+3. Download the `OmniTerm-Windows` artifact ZIP.
+4. Extract the ZIP.
+5. Double-click the included `*-setup.exe` or `.msi` installer.
+6. Launch OmniTerm from the Start menu.
 
-For development builds, open the latest **Desktop builds** GitHub Actions run, download `OmniTerm-Windows`, extract the ZIP, and double-click the included installer.
+Because preview installers are not code-signed yet, Windows SmartScreen may show a warning. Review the publisher information and use **More info → Run anyway** only when you downloaded it from this repository.
 
 ### macOS
 
-1. Open the repository's **Releases** page.
-2. Download the OmniTerm DMG.
-3. Open the DMG and drag OmniTerm into Applications.
-4. Launch OmniTerm from Applications.
+1. Open the repository's **Actions** page.
+2. Open the newest successful **Desktop builds** run.
+3. Download the `OmniTerm-macOS` artifact ZIP.
+4. Extract and open the `.dmg`.
+5. Drag OmniTerm into **Applications**.
+6. Launch OmniTerm from Applications.
 
-For development builds, open the latest **Desktop builds** GitHub Actions run and download `OmniTerm-macOS`.
+Preview macOS builds are not notarized yet. macOS may require Control-clicking the app, choosing **Open**, and confirming the prompt.
 
-Unsigned development builds may show Windows SmartScreen or macOS Gatekeeper warnings. Public production releases should be code-signed and macOS builds should be notarized.
+Tagged versions such as `v0.1.0` also create a draft GitHub Release containing the platform installers.
 
-## Ollama setup
+## What currently works
 
-The first desktop milestone uses Ollama for local models. Install and start Ollama, then pull a coding model:
+- Native Windows and macOS desktop window
+- Ollama chat through the native Rust backend
+- Configurable Ollama model and endpoint
+- Native project-folder picker
+- Workspace file browser
+- Text-file preview up to 1 MB
+- Workspace-scoped terminal commands
+- Automatic execution for recognized low-risk read-only commands
+- **Allow once** confirmation for unknown or state-changing commands
+- Blocking for recognized privileged or destructive commands
+- Automatic Windows installer and macOS DMG builds through GitHub Actions
 
-```powershell
+## First launch
+
+### 1. Install Ollama
+
+Install Ollama for your operating system, start it, and pull a coding model:
+
+```text
 ollama pull qwen2.5-coder:7b
 ```
 
-Launch OmniTerm, leave the endpoint as `http://127.0.0.1:11434`, and select the installed model.
+Ollama is separate from OmniTerm because model files can be several gigabytes and users may already have their preferred local models installed.
 
-## Desktop features
+### 2. Open OmniTerm
 
-- Native Windows and macOS application
-- Ollama chat through the Rust backend
-- Configurable model and endpoint
-- Native project-folder picker
-- Chat history and connection status
-- Prepared terminal, approval, and safety panels
-- Automated Windows and macOS installer builds
+The default settings are:
 
-Desktop contributor instructions are in [`apps/desktop/README.md`](apps/desktop/README.md).
+```text
+Provider: Ollama
+Model: qwen2.5-coder:7b
+Endpoint: http://127.0.0.1:11434
+```
 
-## CLI installation with Git
+Change the model field when using another installed Ollama model.
 
-The Python CLI remains available for developers and advanced users.
+### 3. Choose a workspace
+
+Select **Choose workspace** and pick a project directory. OmniTerm will list files while skipping common large internal folders such as `.git`, `node_modules`, `.venv`, and Rust `target` directories.
+
+Select a text file to preview it. Canonical path checks prevent previews from escaping the selected workspace through `..` paths or symbolic links.
+
+### 4. Use the terminal
+
+Enter a command in the terminal panel. Examples of recognized read-only commands include:
+
+```text
+git status
+git diff
+git log
+ls
+dir
+pwd
+```
+
+A command such as a package installation, Git commit, or other state-changing operation is paused and shown in the **Approvals** panel. Choose **Allow once** to execute that exact command or **Cancel** to discard it.
+
+Recognized destructive or privileged commands are denied rather than offered for approval.
+
+## Build from source
+
+End users should use the packaged installers above. These commands are only for contributors.
 
 Requirements:
 
-- Git
-- Python 3.11 or newer
-- Ollama for local chat
+- Node.js 20 or newer
+- Rust stable toolchain
+- Tauri operating-system prerequisites
 
 ```bash
 git clone https://github.com/benjaminbencsik/omniterm.git
-cd omniterm
+cd omniterm/apps/desktop
+npm install
+npm run tauri dev
+```
+
+Create an installer locally:
+
+```bash
+npm run tauri build
+```
+
+Build output is written under:
+
+```text
+apps/desktop/src-tauri/target/release/bundle/
+```
+
+## Command-line runtime
+
+The original Python CLI remains in the repository for development and testing. It requires Python 3.11 or newer:
+
+```bash
 python -m venv .venv
 ```
 
-Activate the environment.
-
-Windows PowerShell:
-
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\.venv\Scripts\Activate.ps1
-```
-
-Linux, macOS, or WSL:
-
-```bash
-source .venv/bin/activate
-```
-
-Install and test:
+Activate the environment and install:
 
 ```bash
 python -m pip install --upgrade pip
@@ -90,76 +139,33 @@ pytest
 omniterm --help
 ```
 
-## CLI installation without Git
+The desktop application does not require this Python environment.
 
-1. Select **Code** on GitHub.
-2. Select **Download ZIP**.
-3. Extract the ZIP.
-4. Open a terminal in the extracted folder.
-5. Create the virtual environment and install as shown above.
-
-## WSL CLI installer
-
-Windows users can install the CLI inside WSL without Git in PowerShell:
-
-```powershell
-wsl bash -lc "curl -fsSL https://raw.githubusercontent.com/benjaminbencsik/omniterm/main/scripts/install-wsl.sh | bash"
-```
-
-Launch it later with:
-
-```powershell
-wsl bash -lc "source ~/omniterm/.venv/bin/activate && omniterm --help"
-```
-
-## CLI usage
-
-Chat with Ollama:
-
-```bash
-omniterm chat "Write a Python hello world program"
-```
-
-List files inside a selected workspace:
-
-```bash
-omniterm files --workspace /path/to/project
-```
-
-Run a recognized low-risk command:
-
-```bash
-omniterm run "git status" --workspace /path/to/project
-```
-
-State-changing commands require explicit approval:
-
-```bash
-omniterm run "git commit -am 'Update files'" --workspace /path/to/project --approve
-```
-
-Recognized destructive or privileged commands remain blocked even with `--approve`.
-
-## Project structure
+## Repository structure
 
 ```text
-apps/desktop/        Tauri, React, and TypeScript desktop application
-src/omniterm/        Python agent and CLI runtime
-src/omniterm/tools/  Workspace filesystem and terminal tools
-tests/               Runtime safety tests
-scripts/             WSL installer
-.github/workflows/   Automated desktop builds
+apps/desktop/                    Tauri, React, and TypeScript desktop app
+apps/desktop/src/                Desktop interface
+apps/desktop/src-tauri/          Native Rust backend and packaging
+.github/workflows/               Windows and macOS build automation
+src/omniterm/                    Python CLI runtime
+src/omniterm/tools/              Python workspace and terminal tools
+tests/                           Python runtime safety tests
+scripts/                         WSL helper installer
+pyproject.toml                   Python package configuration
 ```
 
-## Planned work
+## Safety model
 
-- Connect GUI approvals to the existing Python safety policy
-- Add integrated terminal sessions and file editing
-- Bundle the agent runtime with installers
-- Add OpenAI-compatible, Anthropic, Google, and custom providers
-- Store API keys in operating-system credential storage
-- Add browser and permission-controlled desktop automation
+OmniTerm operates inside a user-selected workspace. The desktop backend canonicalizes workspace paths before reading files or starting commands. Read-only commands can run automatically, unknown or state-changing commands require explicit one-time approval, and recognized destructive or privileged commands are blocked.
 
-## Safety principles
+This policy is an additional safeguard, not a complete security sandbox. Review commands before approving them and avoid selecting folders containing sensitive material.
 
-OmniTerm operates inside a user-selected workspace by default. Destructive commands, privilege escalation, credential access, package installation, external application control, and Git pushes should require explicit approval.
+## Roadmap
+
+- Let the chat agent request file and terminal tools
+- Show proposed file edits and unified diffs before writing
+- Add BYOK providers and encrypted credential storage
+- Add persistent terminal sessions
+- Add signed Windows installers and notarized macOS releases
+- Add browser automation and structured desktop control
