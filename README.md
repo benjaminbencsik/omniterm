@@ -1,18 +1,32 @@
 # OmniTerm
 
-OmniTerm is an early local-first desktop coding agent for Ollama and other local models. The repository currently contains the application source code, including a Tauri desktop interface, workspace browsing, text-file previews, a workspace-scoped terminal, and approval prompts for commands that may change a project or computer.
+OmniTerm is an early local-first desktop coding agent for Ollama and other local models. It includes a Tauri desktop interface, workspace browsing, text-file previews, a workspace-scoped terminal, and approval prompts for commands that may change a project or computer.
 
-## Important: no prebuilt installer is currently included
+## Download the desktop application
 
-The repository ZIP is **source code only**. It does not currently contain:
+OmniTerm now has an automated native build pipeline for Windows and macOS.
 
-- a Windows `.exe` or `.msi` installer
-- a portable Windows executable
-- a macOS `.dmg` or ready-to-run `.app`
+After a successful build, open the repository's **Releases** page and select **OmniTerm Desktop Preview**.
 
-A `.cmd`, PowerShell, or shell script is not the finished desktop application. The earlier launcher scripts have been removed to avoid that confusion.
+Download the package for your operating system:
 
-A real Windows executable must be compiled on a Windows machine with the required Tauri toolchain, or uploaded as a compiled release asset after a successful build. A real macOS application must be compiled on macOS.
+- Windows: `*-setup.exe` is the recommended installer. An `.msi` may also be available.
+- macOS: download the `.dmg`, open it, and move OmniTerm into Applications.
+
+The source-code ZIP from the green **Code** button is not the application installer. Use the files attached to the Desktop Preview release instead.
+
+Preview builds are currently unsigned. Windows SmartScreen may show a warning, and macOS may require Control-clicking OmniTerm and choosing **Open**.
+
+## Automated installer builds
+
+The workflow at `.github/workflows/desktop-build.yml` compiles OmniTerm on native GitHub-hosted systems:
+
+- `windows-latest` produces the Windows setup executable and MSI.
+- `macos-latest` produces the macOS DMG.
+- Successful builds are published to the rolling `desktop-preview` prerelease.
+- Version tags such as `v0.1.0` publish a versioned release.
+
+A new build runs when changes are pushed to `main`, when a `v*` tag is pushed, or when the workflow is started manually.
 
 ## Current desktop features
 
@@ -25,6 +39,24 @@ A real Windows executable must be compiled on a Windows machine with the require
 - Workspace-scoped terminal commands
 - One-time approval prompts for state-changing commands
 - Blocking for recognized destructive and privileged commands
+
+## Ollama setup
+
+Install and start Ollama separately, then pull a coding model:
+
+```text
+ollama pull qwen2.5-coder:7b
+```
+
+Default OmniTerm settings:
+
+```text
+Provider: Ollama
+Model: qwen2.5-coder:7b
+Endpoint: http://127.0.0.1:11434
+```
+
+Ollama remains separate because local model downloads can be several gigabytes.
 
 ## Build the Windows application from source
 
@@ -45,17 +77,11 @@ npm install
 npm run tauri build
 ```
 
-After a successful build, Windows packages are normally written under:
+Windows packages are written under:
 
 ```text
 apps\desktop\src-tauri\target\release\bundle\nsis\
 apps\desktop\src-tauri\target\release\bundle\msi\
-```
-
-The uninstalled executable is normally written under:
-
-```text
-apps\desktop\src-tauri\target\release\
 ```
 
 ## Build the macOS application from source
@@ -74,7 +100,7 @@ npm install
 npm run tauri build
 ```
 
-Build output is normally written under:
+Build output is written under:
 
 ```text
 apps/desktop/src-tauri/target/release/bundle/dmg/
@@ -91,28 +117,13 @@ npm install
 npm run tauri dev
 ```
 
-## Ollama setup
-
-Install and start Ollama separately, then pull a coding model:
-
-```text
-ollama pull qwen2.5-coder:7b
-```
-
-Default OmniTerm settings:
-
-```text
-Provider: Ollama
-Model: qwen2.5-coder:7b
-Endpoint: http://127.0.0.1:11434
-```
-
 ## Repository structure
 
 ```text
 apps/desktop/                    Tauri, React, and TypeScript desktop app
 apps/desktop/src/                Desktop interface
 apps/desktop/src-tauri/          Native Rust backend and packaging
+.github/workflows/desktop-build.yml  Native installer build and release workflow
 src/omniterm/                    Python CLI runtime
 src/omniterm/tools/              Python workspace and terminal tools
 tests/                           Runtime safety tests
@@ -121,10 +132,10 @@ pyproject.toml                   Python package configuration
 
 ## Current limitations
 
-- No prebuilt Windows or macOS installer is checked into the repository.
+- The first automated Windows and macOS packages still need a successful build validation.
+- Builds are not code-signed or notarized.
 - Chat does not yet autonomously invoke file or terminal tools.
 - File editing and unified-diff approval are not implemented yet.
-- Builds are not code-signed or notarized.
 - Ollama must be installed separately.
 
 ## Safety model
@@ -135,7 +146,8 @@ This policy is an additional safeguard, not a complete security sandbox. Review 
 
 ## Roadmap
 
-- Publish a real Windows installer and macOS application package
+- Validate and sign Windows installers
+- Notarize macOS releases
 - Let the chat agent request file and terminal tools
 - Show proposed edits and unified diffs before writing
 - Add BYOK providers and encrypted credential storage
