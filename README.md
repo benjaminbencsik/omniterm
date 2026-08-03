@@ -2,35 +2,112 @@
 
 OmniTerm is a local-first desktop coding agent for local models. It provides Ollama chat, a workspace file browser, text-file previews, a workspace-scoped terminal, and approval prompts for commands that may change your project or system.
 
-> **Status:** Early preview. The desktop application is usable, but installers are currently unsigned and the agent does not yet autonomously choose filesystem or terminal tools from chat.
+> **Status:** Early preview. The desktop application is usable, but installers are unsigned and the agent does not yet autonomously choose filesystem or terminal tools from chat.
 
-## Download the desktop application
+## Run OmniTerm on your own desktop
 
-You do not need Python, Node.js, Rust, Git, PowerShell, or WSL to use a packaged build.
+The source ZIP does not already contain a compiled `.exe` or `.app`. It must be built once on the computer where you want to run it. After that build finishes, you can install and launch OmniTerm like a normal desktop application.
 
-### Windows
+GitHub Actions is optional and is not required for local use.
 
-1. Open the repository's **Actions** page.
-2. Open the newest successful **Desktop builds** run.
-3. Download the `OmniTerm-Windows` artifact ZIP.
-4. Extract the ZIP.
-5. Double-click the included `*-setup.exe` or `.msi` installer.
-6. Launch OmniTerm from the Start menu.
+## Windows local desktop build
 
-Because preview installers are not code-signed yet, Windows SmartScreen may show a warning. Review the publisher information and use **More info → Run anyway** only when you downloaded it from this repository.
+### 1. Download the source ZIP
 
-### macOS
+1. Open this repository.
+2. Select **Code → Download ZIP**.
+3. Extract `omniterm-main.zip`.
 
-1. Open the repository's **Actions** page.
-2. Open the newest successful **Desktop builds** run.
-3. Download the `OmniTerm-macOS` artifact ZIP.
-4. Extract and open the `.dmg`.
-5. Drag OmniTerm into **Applications**.
-6. Launch OmniTerm from Applications.
+### 2. Install the Windows build prerequisites once
 
-Preview macOS builds are not notarized yet. macOS may require Control-clicking the app, choosing **Open**, and confirming the prompt.
+Install Node.js LTS:
 
-Tagged versions such as `v0.1.0` also create a draft GitHub Release containing the platform installers.
+```powershell
+winget install OpenJS.NodeJS.LTS
+```
+
+Install Rust:
+
+```powershell
+winget install Rustlang.Rustup
+```
+
+Install Microsoft Visual Studio Build Tools with the **Desktop development with C++** workload. Tauri also uses Microsoft Edge WebView2, which is already included on most current Windows systems.
+
+Restart Windows or reopen your terminal after installing the prerequisites.
+
+### 3. Build by double-clicking
+
+Inside the extracted OmniTerm folder, double-click:
+
+```text
+BUILD-WINDOWS.cmd
+```
+
+The script installs the project dependencies and builds the Windows application locally.
+
+When it finishes, the installer is written under:
+
+```text
+apps\desktop\src-tauri\target\release\bundle\nsis\
+```
+
+You may also find an MSI under:
+
+```text
+apps\desktop\src-tauri\target\release\bundle\msi\
+```
+
+Double-click the generated setup `.exe` or `.msi`, then launch OmniTerm from the Start menu.
+
+Because the preview installer is not code-signed, Windows SmartScreen may display a warning.
+
+## macOS local desktop build
+
+### 1. Download and extract the source ZIP
+
+Download **Code → Download ZIP**, then extract it.
+
+### 2. Install the macOS build prerequisites once
+
+Install Xcode Command Line Tools:
+
+```bash
+xcode-select --install
+```
+
+Install Node.js LTS and Rust. With Homebrew:
+
+```bash
+brew install node
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+### 3. Build the app
+
+Double-click:
+
+```text
+BUILD-MACOS.command
+```
+
+If macOS blocks the script, Control-click it, choose **Open**, and confirm.
+
+The build produces a DMG under:
+
+```text
+apps/desktop/src-tauri/target/release/bundle/dmg/
+```
+
+It may also produce an app bundle under:
+
+```text
+apps/desktop/src-tauri/target/release/bundle/macos/
+```
+
+Open the DMG, drag OmniTerm into **Applications**, and launch it normally.
+
+Preview macOS builds are not signed or notarized yet.
 
 ## What currently works
 
@@ -44,21 +121,14 @@ Tagged versions such as `v0.1.0` also create a draft GitHub Release containing t
 - Automatic execution for recognized low-risk read-only commands
 - **Allow once** confirmation for unknown or state-changing commands
 - Blocking for recognized privileged or destructive commands
-- Automatic Windows installer and macOS DMG builds through GitHub Actions
 
 ## First launch
 
-### 1. Install Ollama
-
-Install Ollama for your operating system, start it, and pull a coding model:
+Install Ollama separately, start it, and pull a coding model:
 
 ```text
 ollama pull qwen2.5-coder:7b
 ```
-
-Ollama is separate from OmniTerm because model files can be several gigabytes and users may already have their preferred local models installed.
-
-### 2. Open OmniTerm
 
 The default settings are:
 
@@ -68,40 +138,13 @@ Model: qwen2.5-coder:7b
 Endpoint: http://127.0.0.1:11434
 ```
 
-Change the model field when using another installed Ollama model.
+Select **Choose workspace** and pick a project directory. OmniTerm lists files while skipping folders such as `.git`, `node_modules`, `.venv`, and Rust `target` directories.
 
-### 3. Choose a workspace
+Select a text file to preview it. Commands run from the selected workspace. Read-only commands can run automatically; unknown or state-changing commands are shown in the **Approvals** panel with **Cancel** and **Allow once** controls.
 
-Select **Choose workspace** and pick a project directory. OmniTerm will list files while skipping common large internal folders such as `.git`, `node_modules`, `.venv`, and Rust `target` directories.
+## Developer launch without creating an installer
 
-Select a text file to preview it. Canonical path checks prevent previews from escaping the selected workspace through `..` paths or symbolic links.
-
-### 4. Use the terminal
-
-Enter a command in the terminal panel. Examples of recognized read-only commands include:
-
-```text
-git status
-git diff
-git log
-ls
-dir
-pwd
-```
-
-A command such as a package installation, Git commit, or other state-changing operation is paused and shown in the **Approvals** panel. Choose **Allow once** to execute that exact command or **Cancel** to discard it.
-
-Recognized destructive or privileged commands are denied rather than offered for approval.
-
-## Build from source
-
-End users should use the packaged installers above. These commands are only for contributors.
-
-Requirements:
-
-- Node.js 20 or newer
-- Rust stable toolchain
-- Tauri operating-system prerequisites
+For contributors who already have Node.js, Rust, and the Tauri prerequisites installed:
 
 ```bash
 git clone https://github.com/benjaminbencsik/omniterm.git
@@ -110,49 +153,36 @@ npm install
 npm run tauri dev
 ```
 
-Create an installer locally:
+Create a local installer manually:
 
 ```bash
 npm run tauri build
 ```
 
-Build output is written under:
-
-```text
-apps/desktop/src-tauri/target/release/bundle/
-```
-
 ## Command-line runtime
 
-The original Python CLI remains in the repository for development and testing. It requires Python 3.11 or newer:
+The original Python CLI remains available for development and testing, but the desktop application does not require Python.
 
 ```bash
 python -m venv .venv
-```
-
-Activate the environment and install:
-
-```bash
 python -m pip install --upgrade pip
 pip install -e ".[dev]"
 pytest
 omniterm --help
 ```
 
-The desktop application does not require this Python environment.
-
 ## Repository structure
 
 ```text
+BUILD-WINDOWS.cmd                Double-click Windows local build launcher
+BUILD-MACOS.command              Double-click macOS local build launcher
 apps/desktop/                    Tauri, React, and TypeScript desktop app
 apps/desktop/src/                Desktop interface
 apps/desktop/src-tauri/          Native Rust backend and packaging
-.github/workflows/               Windows and macOS build automation
+scripts/build-windows.ps1        Windows local build implementation
+scripts/build-macos.sh           macOS local build implementation
 src/omniterm/                    Python CLI runtime
-src/omniterm/tools/              Python workspace and terminal tools
 tests/                           Python runtime safety tests
-scripts/                         WSL helper installer
-pyproject.toml                   Python package configuration
 ```
 
 ## Safety model
