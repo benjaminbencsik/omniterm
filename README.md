@@ -6,12 +6,12 @@ OmniTerm is a local-first desktop coding agent for local models. It provides Oll
 
 ## Quick start
 
-There is now only **one launcher per operating system**:
+There is one launcher per operating system:
 
 - Windows: `RUN-WINDOWS.cmd`
 - macOS: `RUN-MACOS.command`
 
-Each launcher builds OmniTerm when needed and then opens the desktop application. Separate `BUILD-*` launchers are no longer necessary.
+Each launcher builds OmniTerm when needed and then opens the desktop application.
 
 ## Windows
 
@@ -19,34 +19,40 @@ Each launcher builds OmniTerm when needed and then opens the desktop application
 
 1. Select **Code → Download ZIP**.
 2. Extract `omniterm-main.zip`.
+3. Double-click `RUN-WINDOWS.cmd`.
 
-### 2. Install prerequisites once
+### Automatic prerequisite setup
 
-Install Node.js LTS:
+The Windows launcher now detects and installs missing build prerequisites automatically using Windows Package Manager (`winget`):
 
-```powershell
-winget install OpenJS.NodeJS.LTS
-```
+- Node.js LTS
+- Rust stable toolchain
+- Microsoft Visual Studio C++ Build Tools
+- Microsoft Edge WebView2 Runtime
 
-Install Rust:
+Windows may show an administrator approval prompt while installing Microsoft components. Accept it to continue.
 
-```powershell
-winget install Rustlang.Rustup
-```
+The only required Windows component that the launcher cannot install by itself is Windows Package Manager. If the launcher reports that `winget` is missing, install **App Installer** from the Microsoft Store and run `RUN-WINDOWS.cmd` again.
 
-Install Microsoft Visual Studio Build Tools with the **Desktop development with C++** workload. Microsoft Edge WebView2 is also required and is already installed on most current Windows systems.
+### First and later launches
 
-Restart Windows or reopen your terminal after installing these tools.
+On the first successful run, the launcher:
 
-### 3. Launch OmniTerm
+1. Installs missing prerequisites.
+2. Refreshes the command environment.
+3. Installs OmniTerm frontend dependencies.
+4. Builds the native desktop application.
+5. Opens OmniTerm.
 
-Double-click:
+Later launches reuse the existing build and open OmniTerm directly.
+
+A diagnostic log is saved as:
 
 ```text
-RUN-WINDOWS.cmd
+omniterm-launch.log
 ```
 
-On the first run, the launcher installs the frontend dependencies, builds OmniTerm locally, and opens it. Later launches reuse the existing build and open the application directly.
+If startup fails, the command window remains open and displays the error. The same details are preserved in the log file.
 
 The compiled application is stored under:
 
@@ -54,22 +60,16 @@ The compiled application is stored under:
 apps\desktop\src-tauri\target\release\
 ```
 
-Tauri may also create installer packages under:
-
-```text
-apps\desktop\src-tauri\target\release\bundle\
-```
-
-You do not need to use those installer files to run OmniTerm from the extracted folder.
-
 ## macOS
 
 ### 1. Download OmniTerm
 
 1. Select **Code → Download ZIP**.
 2. Extract the ZIP.
+3. Install the prerequisites below once.
+4. Open `RUN-MACOS.command`.
 
-### 2. Install prerequisites once
+### macOS prerequisites
 
 Install Xcode Command Line Tools:
 
@@ -87,14 +87,6 @@ Install Rust:
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-```
-
-### 3. Launch OmniTerm
-
-Open:
-
-```text
-RUN-MACOS.command
 ```
 
 The first run builds the app and opens it. Later launches reuse the existing application bundle.
@@ -144,6 +136,8 @@ Commands run inside the selected workspace. Recognized read-only commands can ru
 - Workspace-scoped terminal commands
 - One-time command approvals
 - Blocking for recognized destructive and privileged commands
+- Automatic Windows build-prerequisite installation
+- Persistent Windows startup diagnostics
 
 ## Developer launch
 
@@ -165,12 +159,12 @@ npm run tauri build
 ## Repository structure
 
 ```text
-RUN-WINDOWS.cmd                 Windows build-and-launch shortcut
+RUN-WINDOWS.cmd                 Windows bootstrap and launch shortcut
 RUN-MACOS.command               macOS build-and-launch shortcut
 apps/desktop/                   Tauri, React, and TypeScript desktop app
 apps/desktop/src/               Desktop interface
 apps/desktop/src-tauri/         Native Rust backend and packaging
-scripts/run-windows.ps1         Windows launcher implementation
+scripts/run-windows.ps1         Windows prerequisite, build, and launch logic
 scripts/run-macos.sh            macOS launcher implementation
 src/omniterm/                   Python CLI runtime
 tests/                          Python runtime safety tests
