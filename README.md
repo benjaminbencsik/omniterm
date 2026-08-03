@@ -1,36 +1,91 @@
 # OmniTerm
 
-OmniTerm is an early local-first desktop coding agent for Ollama and other local models. It includes a Tauri desktop interface, workspace browsing, text-file previews, a workspace-scoped terminal, and approval prompts for commands that may change a project or computer.
+OmniTerm is an early Windows desktop coding agent for Ollama. It includes a native desktop interface, workspace browsing, text-file previews, a workspace-scoped terminal, and approval prompts for commands that may change a project or computer.
 
-## Download the desktop application
+## Windows only for now
 
-OmniTerm now has an automated native build pipeline for Windows and macOS.
+The current goal is to get one Windows build working reliably before adding macOS support.
 
-After a successful build, open the repository's **Releases** page and select **OmniTerm Desktop Preview**.
+There is one supported installer format:
 
-Download the package for your operating system:
+```text
+OmniTerm_*_x64-setup.exe
+```
 
-- Windows: `*-setup.exe` is the recommended installer. An `.msi` may also be available.
-- macOS: download the `.dmg`, open it, and move OmniTerm into Applications.
+Do not use the green **Code → Download ZIP** button when you only want to install the application. That ZIP contains source code, not the finished Windows app.
 
-The source-code ZIP from the green **Code** button is not the application installer. Use the files attached to the Desktop Preview release instead.
+## Install OmniTerm on Windows
 
-Preview builds are currently unsigned. Windows SmartScreen may show a warning, and macOS may require Control-clicking OmniTerm and choosing **Open**.
+### 1. Download the installer
 
-## Automated installer builds
+1. Open this repository's **Releases** section.
+2. Open **OmniTerm Windows Preview**.
+3. Under **Assets**, download the file ending in:
 
-The workflow at `.github/workflows/desktop-build.yml` compiles OmniTerm on native GitHub-hosted systems:
+```text
+-setup.exe
+```
 
-- `windows-latest` produces the Windows setup executable and MSI.
-- `macos-latest` produces the macOS DMG.
-- Successful builds are published to the rolling `desktop-preview` prerelease.
-- Version tags such as `v0.1.0` publish a versioned release.
+If no `-setup.exe` file is listed, the Windows build has not completed successfully yet. There is nothing installable to download until that file appears.
 
-A new build runs when changes are pushed to `main`, when a `v*` tag is pushed, or when the workflow is started manually.
+### 2. Install it
 
-## Current desktop features
+1. Double-click the downloaded `-setup.exe` file.
+2. Complete the setup wizard.
+3. Launch **OmniTerm** from the Windows Start menu.
 
-- Native Tauri desktop interface
+The preview installer is unsigned. Windows SmartScreen may display a warning. Only continue when the installer came from this repository's Releases section.
+
+## Set up Ollama
+
+OmniTerm currently uses Ollama for local models. Ollama is installed separately.
+
+1. Install Ollama for Windows.
+2. Start Ollama.
+3. Open PowerShell and pull the default coding model:
+
+```powershell
+ollama pull qwen2.5-coder:7b
+```
+
+4. Confirm Ollama is running:
+
+```powershell
+ollama list
+```
+
+## Use OmniTerm
+
+1. Open OmniTerm from the Start menu.
+2. Leave these defaults unless your Ollama setup is different:
+
+```text
+Provider: Ollama
+Model: qwen2.5-coder:7b
+Endpoint: http://127.0.0.1:11434
+```
+
+3. Select **Choose workspace**.
+4. Choose a project folder.
+5. Enter a prompt in the chat box and select **Send**.
+6. Select files in the workspace browser to preview them.
+7. Use the terminal panel for workspace commands.
+
+Recognized read-only commands can run automatically. Unknown or state-changing commands appear in the **Approvals** panel with **Cancel** and **Allow once** controls. Recognized destructive and privileged commands are blocked.
+
+## First test
+
+After installing Ollama and OmniTerm, try:
+
+```text
+Write a short Python hello-world program and explain each line.
+```
+
+A successful response confirms that OmniTerm can connect to the local Ollama service.
+
+## What currently works
+
+- Native Windows desktop application
 - Ollama chat through the Rust backend
 - Configurable Ollama model and endpoint
 - Native workspace-folder picker
@@ -40,25 +95,34 @@ A new build runs when changes are pushed to `main`, when a `v*` tag is pushed, o
 - One-time approval prompts for state-changing commands
 - Blocking for recognized destructive and privileged commands
 
-## Ollama setup
+## Current limitations
 
-Install and start Ollama separately, then pull a coding model:
+- The Windows installer still needs a successful build and real-machine validation.
+- The installer is not code-signed.
+- Chat does not yet autonomously invoke file or terminal tools.
+- File editing and unified-diff approval are not implemented yet.
+- Ollama must be installed separately.
+- macOS support is paused until the Windows application is validated.
+
+## Windows build pipeline
+
+The workflow at:
 
 ```text
-ollama pull qwen2.5-coder:7b
+.github/workflows/desktop-build.yml
 ```
 
-Default OmniTerm settings:
+builds one Windows NSIS setup executable on `windows-latest` and publishes it to the rolling **OmniTerm Windows Preview** release.
+
+The expected release asset path is:
 
 ```text
-Provider: Ollama
-Model: qwen2.5-coder:7b
-Endpoint: http://127.0.0.1:11434
+apps/desktop/src-tauri/target/release/bundle/nsis/*-setup.exe
 ```
 
-Ollama remains separate because local model downloads can be several gigabytes.
+## Build from source
 
-## Build the Windows application from source
+This section is for developers only.
 
 Requirements:
 
@@ -68,8 +132,6 @@ Requirements:
 - Microsoft Visual Studio Build Tools with **Desktop development with C++**
 - Microsoft Edge WebView2 Runtime
 
-From PowerShell:
-
 ```powershell
 git clone https://github.com/benjaminbencsik/omniterm.git
 cd omniterm\apps\desktop
@@ -77,66 +139,22 @@ npm install
 npm run tauri build
 ```
 
-Windows packages are written under:
+The Windows setup executable is written under:
 
 ```text
 apps\desktop\src-tauri\target\release\bundle\nsis\
-apps\desktop\src-tauri\target\release\bundle\msi\
-```
-
-## Build the macOS application from source
-
-Requirements:
-
-- macOS
-- Xcode Command Line Tools
-- Node.js 20 or newer
-- Rust stable toolchain
-
-```bash
-git clone https://github.com/benjaminbencsik/omniterm.git
-cd omniterm/apps/desktop
-npm install
-npm run tauri build
-```
-
-Build output is written under:
-
-```text
-apps/desktop/src-tauri/target/release/bundle/dmg/
-apps/desktop/src-tauri/target/release/bundle/macos/
-```
-
-## Development mode
-
-Run the desktop application without creating an installer:
-
-```bash
-cd apps/desktop
-npm install
-npm run tauri dev
 ```
 
 ## Repository structure
 
 ```text
-apps/desktop/                    Tauri, React, and TypeScript desktop app
-apps/desktop/src/                Desktop interface
-apps/desktop/src-tauri/          Native Rust backend and packaging
-.github/workflows/desktop-build.yml  Native installer build and release workflow
-src/omniterm/                    Python CLI runtime
-src/omniterm/tools/              Python workspace and terminal tools
-tests/                           Runtime safety tests
-pyproject.toml                   Python package configuration
+apps/desktop/                         Tauri, React, and TypeScript desktop app
+apps/desktop/src/                     Desktop interface
+apps/desktop/src-tauri/               Native Rust backend and Windows packaging
+.github/workflows/desktop-build.yml   Windows installer build and release workflow
+src/omniterm/                         Python CLI runtime
+tests/                                Runtime safety tests
 ```
-
-## Current limitations
-
-- The first automated Windows and macOS packages still need a successful build validation.
-- Builds are not code-signed or notarized.
-- Chat does not yet autonomously invoke file or terminal tools.
-- File editing and unified-diff approval are not implemented yet.
-- Ollama must be installed separately.
 
 ## Safety model
 
@@ -146,10 +164,10 @@ This policy is an additional safeguard, not a complete security sandbox. Review 
 
 ## Roadmap
 
-- Validate and sign Windows installers
-- Notarize macOS releases
+- Produce and validate the first Windows installer
+- Test installation and launch on a clean Windows system
 - Let the chat agent request file and terminal tools
 - Show proposed edits and unified diffs before writing
 - Add BYOK providers and encrypted credential storage
 - Add persistent terminal sessions
-- Add browser automation and structured desktop control
+- Revisit macOS after Windows is stable
