@@ -1,295 +1,171 @@
 # OmniTerm
 
-OmniTerm is a local-first coding agent that works with local language models and, eventually, user-supplied cloud API keys. The current release provides an Ollama chat command, workspace-restricted filesystem access, and approval-controlled terminal execution.
+OmniTerm is a local-first desktop coding agent for local models. It provides Ollama chat, a workspace file browser, text-file previews, a workspace-scoped terminal, and approval prompts for commands that may change your project or system.
 
-> **Development status:** This is an early command-line runtime. The desktop interface, BYOK provider settings, persistent terminal, and computer-control layer are still under development.
+> **Status:** Early preview. The desktop application is usable, but installers are currently unsigned and the agent does not yet autonomously choose filesystem or terminal tools from chat.
 
-## Choose an installation method
+## Download the desktop application
 
-- **Windows with WSL:** recommended for the current release
-- **Windows without WSL:** runs directly in PowerShell using Python
-- **Linux or macOS:** standard Git and Python installation
+You do not need Python, Node.js, Rust, Git, PowerShell, or WSL to use a packaged build.
 
-## Standard installation with Git clone
+### Windows
 
-Requirements:
+1. Open the repository's **Actions** page.
+2. Open the newest successful **Desktop builds** run.
+3. Download the `OmniTerm-Windows` artifact ZIP.
+4. Extract the ZIP.
+5. Double-click the included `*-setup.exe` or `.msi` installer.
+6. Launch OmniTerm from the Start menu.
 
-- Git
-- Python 3.11 or newer
-- Ollama, when using a local model
+Because preview installers are not code-signed yet, Windows SmartScreen may show a warning. Review the publisher information and use **More info → Run anyway** only when you downloaded it from this repository.
 
-Clone and install:
+### macOS
 
-```bash
-git clone https://github.com/benjaminbencsik/omniterm.git
-cd omniterm
-python -m venv .venv
-```
+1. Open the repository's **Actions** page.
+2. Open the newest successful **Desktop builds** run.
+3. Download the `OmniTerm-macOS` artifact ZIP.
+4. Extract and open the `.dmg`.
+5. Drag OmniTerm into **Applications**.
+6. Launch OmniTerm from Applications.
 
-Activate the virtual environment.
+Preview macOS builds are not notarized yet. macOS may require Control-clicking the app, choosing **Open**, and confirming the prompt.
 
-Windows PowerShell:
+Tagged versions such as `v0.1.0` also create a draft GitHub Release containing the platform installers.
 
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
+## What currently works
 
-Windows Command Prompt:
+- Native Windows and macOS desktop window
+- Ollama chat through the native Rust backend
+- Configurable Ollama model and endpoint
+- Native project-folder picker
+- Workspace file browser
+- Text-file preview up to 1 MB
+- Workspace-scoped terminal commands
+- Automatic execution for recognized low-risk read-only commands
+- **Allow once** confirmation for unknown or state-changing commands
+- Blocking for recognized privileged or destructive commands
+- Automatic Windows installer and macOS DMG builds through GitHub Actions
 
-```bat
-.venv\Scripts\activate.bat
-```
+## First launch
 
-Linux, macOS, or WSL:
+### 1. Install Ollama
 
-```bash
-source .venv/bin/activate
-```
+Install Ollama for your operating system, start it, and pull a coding model:
 
-Install OmniTerm:
-
-```bash
-python -m pip install --upgrade pip
-pip install -e ".[dev]"
-omniterm --help
-```
-
-Run the tests:
-
-```bash
-pytest
-```
-
-## Windows installation without WSL
-
-OmniTerm can run directly in Windows PowerShell. You need Python 3.11 or newer. Git is optional because you can either clone the repository or download a ZIP file.
-
-### Option A: Install Git and clone the repository
-
-Install Git for Windows using either method below.
-
-Using Windows Package Manager:
-
-```powershell
-winget install --id Git.Git -e
-```
-
-Or download Git for Windows from its official installer page, then reopen PowerShell after installation.
-
-Verify Git and Python:
-
-```powershell
-git --version
-python --version
-```
-
-Clone and install OmniTerm:
-
-```powershell
-git clone https://github.com/benjaminbencsik/omniterm.git
-cd omniterm
-python -m venv .venv
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-pip install -e ".[dev]"
-omniterm --help
-```
-
-### Option B: Download OmniTerm without Git
-
-1. Open the OmniTerm repository in a web browser.
-2. Select **Code**.
-3. Select **Download ZIP**.
-4. Extract the ZIP file, usually named `omniterm-main.zip`.
-5. Open PowerShell inside the extracted `omniterm-main` folder.
-
-Then install:
-
-```powershell
-python -m venv .venv
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-pip install -e ".[dev]"
-omniterm --help
-```
-
-If the `python` command is unavailable, install Python with Windows Package Manager:
-
-```powershell
-winget install --id Python.Python.3.12 -e
-```
-
-Reopen PowerShell after installation and verify it:
-
-```powershell
-python --version
-```
-
-### Launching OmniTerm later on Windows
-
-Open PowerShell in the OmniTerm folder and run:
-
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\.venv\Scripts\Activate.ps1
-omniterm --help
-```
-
-## Windows installation using WSL
-
-This is the recommended setup for Windows. Git is not required in PowerShell because installation and execution happen inside WSL.
-
-### 1. Confirm WSL is installed
-
-Open PowerShell and run:
-
-```powershell
-wsl --status
-```
-
-If WSL is missing, open PowerShell as Administrator and run:
-
-```powershell
-wsl --install -d Ubuntu
-```
-
-Restart Windows if requested, then open Ubuntu once and create your Linux username and password.
-
-### 2. Install OmniTerm inside WSL automatically
-
-Run this from PowerShell or Windows Terminal:
-
-```powershell
-wsl bash -lc "curl -fsSL https://raw.githubusercontent.com/benjaminbencsik/omniterm/main/scripts/install-wsl.sh | bash"
-```
-
-The installer installs Git, Python, and required build tools inside WSL, clones OmniTerm to `~/omniterm`, creates a virtual environment, and installs the CLI.
-
-### 3. Install manually with Git clone inside WSL
-
-Enter WSL:
-
-```powershell
-wsl
-```
-
-Then run:
-
-```bash
-sudo apt update
-sudo apt install -y git python3 python3-venv python3-pip
-git clone https://github.com/benjaminbencsik/omniterm.git
-cd omniterm
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-pip install -e ".[dev]"
-pytest
-omniterm --help
-```
-
-### 4. Launch OmniTerm through WSL
-
-From PowerShell:
-
-```powershell
-wsl bash -lc "source ~/omniterm/.venv/bin/activate && omniterm --help"
-```
-
-The repository also includes `omniterm-wsl.cmd`, a Windows launcher that forwards command-line arguments into WSL after OmniTerm has been installed.
-
-Example:
-
-```powershell
-.\omniterm-wsl.cmd files --workspace /mnt/c/Users/YourName/Documents/project
-```
-
-## Ollama setup
-
-Install Ollama and pull a coding model:
-
-```powershell
+```text
 ollama pull qwen2.5-coder:7b
 ```
 
-Test local chat:
+Ollama is separate from OmniTerm because model files can be several gigabytes and users may already have their preferred local models installed.
 
-```powershell
-omniterm chat "Write a Python hello world program"
-```
+### 2. Open OmniTerm
 
-Choose another model:
-
-```powershell
-omniterm chat "Explain this architecture" --model qwen3-coder:latest
-```
-
-Set another Ollama endpoint:
-
-```powershell
-omniterm chat "Hello" --base-url http://127.0.0.1:11434
-```
-
-## Filesystem tools
-
-List files inside a selected workspace:
-
-```powershell
-omniterm files --workspace C:\Users\YourName\Documents\project
-```
-
-Inside Linux, macOS, or WSL:
-
-```bash
-omniterm files --workspace ~/projects/example
-```
-
-The filesystem layer rejects paths that escape the selected workspace.
-
-## Terminal tools
-
-Run a recognized low-risk command:
-
-```powershell
-omniterm run "git status" --workspace C:\Users\YourName\Documents\project
-```
-
-Commands that may modify state, install software, access the network, or start another shell require explicit approval:
-
-```powershell
-omniterm run "git commit -am 'Update files'" --workspace C:\Users\YourName\Documents\project
-```
-
-After reviewing the exact command, approve it explicitly:
-
-```powershell
-omniterm run "git commit -am 'Update files'" --workspace C:\Users\YourName\Documents\project --approve
-```
-
-Recognized destructive or privileged commands remain blocked even with `--approve`.
-
-## Current project structure
+The default settings are:
 
 ```text
-src/omniterm/       Python agent runtime
-src/omniterm/tools/ Workspace filesystem and terminal tools
-tests/              Runtime safety tests
-scripts/             WSL installer
-omniterm-wsl.cmd     Windows-to-WSL launcher
-pyproject.toml       Python package configuration
+Provider: Ollama
+Model: qwen2.5-coder:7b
+Endpoint: http://127.0.0.1:11434
 ```
 
-## Planned architecture
+Change the model field when using another installed Ollama model.
 
-- **Desktop application:** Tauri, React, and TypeScript
-- **Agent runtime:** Python
-- **Providers:** Ollama, OpenAI-compatible APIs, Anthropic, and Google
-- **Terminal:** persistent pseudo-terminal sessions
-- **Storage:** SQLite and operating-system credential storage
-- **Automation:** Playwright first, structured desktop automation later
+### 3. Choose a workspace
 
-## Safety principles
+Select **Choose workspace** and pick a project directory. OmniTerm will list files while skipping common large internal folders such as `.git`, `node_modules`, `.venv`, and Rust `target` directories.
 
-OmniTerm operates inside a user-selected workspace by default. Destructive commands, privilege escalation, credential access, package installation, external application control, and Git pushes should require explicit approval.
+Select a text file to preview it. Canonical path checks prevent previews from escaping the selected workspace through `..` paths or symbolic links.
+
+### 4. Use the terminal
+
+Enter a command in the terminal panel. Examples of recognized read-only commands include:
+
+```text
+git status
+git diff
+git log
+ls
+dir
+pwd
+```
+
+A command such as a package installation, Git commit, or other state-changing operation is paused and shown in the **Approvals** panel. Choose **Allow once** to execute that exact command or **Cancel** to discard it.
+
+Recognized destructive or privileged commands are denied rather than offered for approval.
+
+## Build from source
+
+End users should use the packaged installers above. These commands are only for contributors.
+
+Requirements:
+
+- Node.js 20 or newer
+- Rust stable toolchain
+- Tauri operating-system prerequisites
+
+```bash
+git clone https://github.com/benjaminbencsik/omniterm.git
+cd omniterm/apps/desktop
+npm install
+npm run tauri dev
+```
+
+Create an installer locally:
+
+```bash
+npm run tauri build
+```
+
+Build output is written under:
+
+```text
+apps/desktop/src-tauri/target/release/bundle/
+```
+
+## Command-line runtime
+
+The original Python CLI remains in the repository for development and testing. It requires Python 3.11 or newer:
+
+```bash
+python -m venv .venv
+```
+
+Activate the environment and install:
+
+```bash
+python -m pip install --upgrade pip
+pip install -e ".[dev]"
+pytest
+omniterm --help
+```
+
+The desktop application does not require this Python environment.
+
+## Repository structure
+
+```text
+apps/desktop/                    Tauri, React, and TypeScript desktop app
+apps/desktop/src/                Desktop interface
+apps/desktop/src-tauri/          Native Rust backend and packaging
+.github/workflows/               Windows and macOS build automation
+src/omniterm/                    Python CLI runtime
+src/omniterm/tools/              Python workspace and terminal tools
+tests/                           Python runtime safety tests
+scripts/                         WSL helper installer
+pyproject.toml                   Python package configuration
+```
+
+## Safety model
+
+OmniTerm operates inside a user-selected workspace. The desktop backend canonicalizes workspace paths before reading files or starting commands. Read-only commands can run automatically, unknown or state-changing commands require explicit one-time approval, and recognized destructive or privileged commands are blocked.
+
+This policy is an additional safeguard, not a complete security sandbox. Review commands before approving them and avoid selecting folders containing sensitive material.
+
+## Roadmap
+
+- Let the chat agent request file and terminal tools
+- Show proposed file edits and unified diffs before writing
+- Add BYOK providers and encrypted credential storage
+- Add persistent terminal sessions
+- Add signed Windows installers and notarized macOS releases
+- Add browser automation and structured desktop control
