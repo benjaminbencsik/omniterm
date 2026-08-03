@@ -5,12 +5,11 @@ on:
   push:
     branches:
       - main
+    tags:
+      - "v*"
     paths:
       - "apps/desktop/**"
       - ".github/workflows/desktop-build.yml"
-  push:
-    tags:
-      - "v*"
 
 permissions:
   contents: write
