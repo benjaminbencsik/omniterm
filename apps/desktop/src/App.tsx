@@ -1,14 +1,10 @@
 import { FormEvent, useMemo, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 
 type ChatMessage = {
   role: "user" | "assistant";
   content: string;
-};
-
-type OllamaResponse = {
-  message?: { content?: string };
-  error?: string;
 };
 
 const initialMessages: ChatMessage[] = [
@@ -51,21 +47,14 @@ export default function App() {
     setError(null);
 
     try {
-      const response = await fetch(`${baseUrl.replace(/\/$/, "")}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model, messages: nextMessages, stream: false }),
+      const content = await invoke<string>("ollama_chat", {
+        baseUrl,
+        model,
+        messages: nextMessages,
       });
-      const payload = (await response.json()) as OllamaResponse;
-      if (!response.ok || payload.error) {
-        throw new Error(payload.error || `Ollama returned HTTP ${response.status}`);
-      }
-      setMessages((current) => [
-        ...current,
-        { role: "assistant", content: payload.message?.content || "No response content." },
-      ]);
+      setMessages((current) => [...current, { role: "assistant", content }]);
     } catch (caught) {
-      const message = caught instanceof Error ? caught.message : "Unable to contact Ollama";
+      const message = caught instanceof Error ? caught.message : String(caught);
       setError(message);
       setMessages((current) => [
         ...current,
