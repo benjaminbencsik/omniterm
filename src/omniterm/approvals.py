@@ -110,4 +110,4 @@ class CommandApprovalPolicy:
             parts = shlex.split(command, posix=False)
         except ValueError:
             return ""
-        return parts[0].strip('"\'') if parts else ""
+        return parts[0].strip("\"'") if parts else ""
