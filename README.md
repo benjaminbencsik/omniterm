@@ -1,119 +1,105 @@
 # OmniTerm
 
-OmniTerm is a local-first desktop coding agent for local models. It provides Ollama chat, workspace browsing, text-file previews, a workspace-scoped terminal, and approval prompts for commands that may change your project or computer.
+OmniTerm is an early local-first desktop coding agent for Ollama and other local models. The repository currently contains the application source code, including a Tauri desktop interface, workspace browsing, text-file previews, a workspace-scoped terminal, and approval prompts for commands that may change a project or computer.
 
-> **Early preview:** OmniTerm is usable as a desktop application, but it is not code-signed, chat does not yet invoke tools autonomously, and Ollama must be installed separately.
+## Important: no prebuilt installer is currently included
 
-## Quick start
+The repository ZIP is **source code only**. It does not currently contain:
 
-There is one launcher per operating system:
+- a Windows `.exe` or `.msi` installer
+- a portable Windows executable
+- a macOS `.dmg` or ready-to-run `.app`
 
-- Windows: `RUN-WINDOWS.cmd`
-- macOS: `RUN-MACOS.command`
+A `.cmd`, PowerShell, or shell script is not the finished desktop application. The earlier launcher scripts have been removed to avoid that confusion.
 
-Each launcher builds OmniTerm when needed and then opens the desktop application.
+A real Windows executable must be compiled on a Windows machine with the required Tauri toolchain, or uploaded as a compiled release asset after a successful build. A real macOS application must be compiled on macOS.
 
-## Windows
+## Current desktop features
 
-### 1. Download OmniTerm
+- Native Tauri desktop interface
+- Ollama chat through the Rust backend
+- Configurable Ollama model and endpoint
+- Native workspace-folder picker
+- Workspace file browser
+- Text-file preview up to 1 MB
+- Workspace-scoped terminal commands
+- One-time approval prompts for state-changing commands
+- Blocking for recognized destructive and privileged commands
 
-1. Select **Code → Download ZIP**.
-2. Extract `omniterm-main.zip`.
-3. Double-click `RUN-WINDOWS.cmd`.
+## Build the Windows application from source
 
-### Automatic prerequisite setup
+Requirements:
 
-The Windows launcher now detects and installs missing build prerequisites automatically using Windows Package Manager (`winget`):
-
-- Node.js LTS
+- Windows 10 or 11
+- Node.js 20 or newer
 - Rust stable toolchain
-- Microsoft Visual Studio C++ Build Tools
+- Microsoft Visual Studio Build Tools with **Desktop development with C++**
 - Microsoft Edge WebView2 Runtime
 
-Windows may show an administrator approval prompt while installing Microsoft components. Accept it to continue.
+From PowerShell:
 
-The only required Windows component that the launcher cannot install by itself is Windows Package Manager. If the launcher reports that `winget` is missing, install **App Installer** from the Microsoft Store and run `RUN-WINDOWS.cmd` again.
-
-### First and later launches
-
-On the first successful run, the launcher:
-
-1. Installs missing prerequisites.
-2. Refreshes the command environment.
-3. Installs OmniTerm frontend dependencies.
-4. Builds the native desktop application.
-5. Opens OmniTerm.
-
-Later launches reuse the existing build and open OmniTerm directly.
-
-A diagnostic log is saved as:
-
-```text
-omniterm-launch.log
+```powershell
+git clone https://github.com/benjaminbencsik/omniterm.git
+cd omniterm\apps\desktop
+npm install
+npm run tauri build
 ```
 
-If startup fails, the command window remains open and displays the error. The same details are preserved in the log file.
+After a successful build, Windows packages are normally written under:
 
-The compiled application is stored under:
+```text
+apps\desktop\src-tauri\target\release\bundle\nsis\
+apps\desktop\src-tauri\target\release\bundle\msi\
+```
+
+The uninstalled executable is normally written under:
 
 ```text
 apps\desktop\src-tauri\target\release\
 ```
 
-## macOS
+## Build the macOS application from source
 
-### 1. Download OmniTerm
+Requirements:
 
-1. Select **Code → Download ZIP**.
-2. Extract the ZIP.
-3. Install the prerequisites below once.
-4. Open `RUN-MACOS.command`.
-
-### macOS prerequisites
-
-Install Xcode Command Line Tools:
+- macOS
+- Xcode Command Line Tools
+- Node.js 20 or newer
+- Rust stable toolchain
 
 ```bash
-xcode-select --install
+git clone https://github.com/benjaminbencsik/omniterm.git
+cd omniterm/apps/desktop
+npm install
+npm run tauri build
 ```
 
-With Homebrew, install Node.js:
-
-```bash
-brew install node
-```
-
-Install Rust:
-
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-```
-
-The first run builds the app and opens it. Later launches reuse the existing application bundle.
-
-If macOS removes executable permissions from the downloaded script, run this once inside the extracted folder:
-
-```bash
-chmod +x RUN-MACOS.command scripts/run-macos.sh
-```
-
-The compiled app is stored under:
+Build output is normally written under:
 
 ```text
+apps/desktop/src-tauri/target/release/bundle/dmg/
 apps/desktop/src-tauri/target/release/bundle/macos/
 ```
 
-Preview builds are not signed or notarized. Control-click OmniTerm, choose **Open**, and confirm if macOS blocks the first launch.
+## Development mode
 
-## First launch setup
+Run the desktop application without creating an installer:
 
-Install Ollama separately, start it, and pull a coding model:
+```bash
+cd apps/desktop
+npm install
+npm run tauri dev
+```
+
+## Ollama setup
+
+Install and start Ollama separately, then pull a coding model:
 
 ```text
 ollama pull qwen2.5-coder:7b
 ```
 
-Default settings:
+Default OmniTerm settings:
 
 ```text
 Provider: Ollama
@@ -121,54 +107,25 @@ Model: qwen2.5-coder:7b
 Endpoint: http://127.0.0.1:11434
 ```
 
-Select **Choose workspace** and pick a project directory. OmniTerm lists files while skipping folders such as `.git`, `node_modules`, `.venv`, and Rust `target` directories.
-
-Commands run inside the selected workspace. Recognized read-only commands can run automatically. Unknown or state-changing commands appear in the **Approvals** panel with **Cancel** and **Allow once** controls. Recognized destructive or privileged commands are blocked.
-
-## What currently works
-
-- Native Windows and macOS desktop application
-- Ollama chat through the Rust backend
-- Configurable Ollama model and endpoint
-- Native project-folder picker
-- Workspace file browser
-- Text-file preview up to 1 MB
-- Workspace-scoped terminal commands
-- One-time command approvals
-- Blocking for recognized destructive and privileged commands
-- Automatic Windows build-prerequisite installation
-- Persistent Windows startup diagnostics
-
-## Developer launch
-
-Developers can run the desktop application directly:
-
-```bash
-git clone https://github.com/benjaminbencsik/omniterm.git
-cd omniterm/apps/desktop
-npm install
-npm run tauri dev
-```
-
-Create a release build manually:
-
-```bash
-npm run tauri build
-```
-
 ## Repository structure
 
 ```text
-RUN-WINDOWS.cmd                 Windows bootstrap and launch shortcut
-RUN-MACOS.command               macOS build-and-launch shortcut
-apps/desktop/                   Tauri, React, and TypeScript desktop app
-apps/desktop/src/               Desktop interface
-apps/desktop/src-tauri/         Native Rust backend and packaging
-scripts/run-windows.ps1         Windows prerequisite, build, and launch logic
-scripts/run-macos.sh            macOS launcher implementation
-src/omniterm/                   Python CLI runtime
-tests/                          Python runtime safety tests
+apps/desktop/                    Tauri, React, and TypeScript desktop app
+apps/desktop/src/                Desktop interface
+apps/desktop/src-tauri/          Native Rust backend and packaging
+src/omniterm/                    Python CLI runtime
+src/omniterm/tools/              Python workspace and terminal tools
+tests/                           Runtime safety tests
+pyproject.toml                   Python package configuration
 ```
+
+## Current limitations
+
+- No prebuilt Windows or macOS installer is checked into the repository.
+- Chat does not yet autonomously invoke file or terminal tools.
+- File editing and unified-diff approval are not implemented yet.
+- Builds are not code-signed or notarized.
+- Ollama must be installed separately.
 
 ## Safety model
 
@@ -178,9 +135,9 @@ This policy is an additional safeguard, not a complete security sandbox. Review 
 
 ## Roadmap
 
+- Publish a real Windows installer and macOS application package
 - Let the chat agent request file and terminal tools
-- Show proposed file edits and unified diffs before writing
+- Show proposed edits and unified diffs before writing
 - Add BYOK providers and encrypted credential storage
 - Add persistent terminal sessions
-- Add signed Windows installers and notarized macOS releases
 - Add browser automation and structured desktop control
