@@ -5,7 +5,7 @@ use std::{
     process::Command,
 };
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 struct ChatMessage {
     role: String,
     content: String,
@@ -20,6 +20,42 @@ struct OllamaMessage {
 struct OllamaResponse {
     message: Option<OllamaMessage>,
     error: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct OllamaModel {
+    name: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct OllamaModelsResponse {
+    models: Vec<OllamaModel>,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenAiModel {
+    id: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenAiModelsResponse {
+    data: Vec<OpenAiModel>,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenAiChoiceMessage {
+    content: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenAiChoice {
+    message: OpenAiChoiceMessage,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenAiChatResponse {
+    choices: Vec<OpenAiChoice>,
+    error: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Serialize)]
@@ -86,10 +122,7 @@ fn collect_entries(root: &Path, current: &Path, entries: &mut Vec<WorkspaceEntry
             .to_string_lossy()
             .replace('\\', "/");
         let is_directory = path.is_dir();
-        entries.push(WorkspaceEntry {
-            path: relative,
-            is_directory,
-        });
+        entries.push(WorkspaceEntry { path: relative, is_directory });
         if is_directory {
             collect_entries(root, &path, entries)?;
         }
@@ -117,52 +150,153 @@ fn command_policy(command: &str) -> (&'static str, &'static str) {
         "which ", "echo ", "python --version", "python3 --version", "node --version",
         "npm --version", "cargo --version",
     ];
-    if allowed_prefixes
-        .iter()
-        .any(|prefix| normalized == *prefix || normalized.starts_with(prefix))
-    {
+    if allowed_prefixes.iter().any(|prefix| normalized == *prefix || normalized.starts_with(prefix)) {
         return ("allow", "Recognized low-risk read-only command");
     }
 
     ("ask", "This command may change files, access the network, or alter system state")
 }
 
+fn auth_request(
+    client: &reqwest::Client,
+    method: reqwest::Method,
+    url: String,
+    api_key: &str,
+) -> reqwest::RequestBuilder {
+    let request = client.request(method, url);
+    if api_key.trim().is_empty() {
+        request
+    } else {
+        request.bearer_auth(api_key.trim())
+    }
+}
+
 #[tauri::command]
-async fn ollama_chat(
+async fn list_provider_models(
+    provider: String,
     base_url: String,
+    api_key: String,
+) -> Result<Vec<String>, String> {
+    let client = reqwest::Client::new();
+    let root = base_url.trim_end_matches('/');
+
+    let mut models = if provider == "ollama" {
+        let response = client
+            .get(format!("{root}/api/tags"))
+            .send()
+            .await
+            .map_err(|error| format!("Unable to contact Ollama: {error}"))?;
+        if !response.status().is_success() {
+            return Err(format!("Model lookup returned HTTP {}", response.status()));
+        }
+        response
+            .json::<OllamaModelsResponse>()
+            .await
+            .map_err(|error| format!("Invalid Ollama model response: {error}"))?
+            .models
+            .into_iter()
+            .map(|model| model.name)
+            .collect::<Vec<_>>()
+    } else {
+        let response = auth_request(
+            &client,
+            reqwest::Method::GET,
+            format!("{root}/v1/models"),
+            &api_key,
+        )
+        .send()
+        .await
+        .map_err(|error| format!("Unable to contact provider: {error}"))?;
+        if !response.status().is_success() {
+            return Err(format!("Model lookup returned HTTP {}", response.status()));
+        }
+        response
+            .json::<OpenAiModelsResponse>()
+            .await
+            .map_err(|error| format!("Invalid provider model response: {error}"))?
+            .data
+            .into_iter()
+            .map(|model| model.id)
+            .collect::<Vec<_>>()
+    };
+
+    models.sort();
+    models.dedup();
+    Ok(models)
+}
+
+#[tauri::command]
+async fn provider_chat(
+    provider: String,
+    base_url: String,
+    api_key: String,
     model: String,
     messages: Vec<ChatMessage>,
 ) -> Result<String, String> {
-    let endpoint = format!("{}/api/chat", base_url.trim_end_matches('/'));
-    let response = reqwest::Client::new()
-        .post(endpoint)
-        .json(&serde_json::json!({
-            "model": model,
-            "messages": messages,
-            "stream": false
-        }))
-        .send()
-        .await
-        .map_err(|error| format!("Unable to contact Ollama: {error}"))?;
+    let client = reqwest::Client::new();
+    let root = base_url.trim_end_matches('/');
+
+    if provider == "ollama" {
+        let response = client
+            .post(format!("{root}/api/chat"))
+            .json(&serde_json::json!({
+                "model": model,
+                "messages": messages,
+                "stream": false
+            }))
+            .send()
+            .await
+            .map_err(|error| format!("Unable to contact Ollama: {error}"))?;
+
+        let status = response.status();
+        let payload: OllamaResponse = response
+            .json()
+            .await
+            .map_err(|error| format!("Invalid Ollama response: {error}"))?;
+        if !status.is_success() {
+            return Err(payload.error.unwrap_or_else(|| format!("Ollama returned HTTP {status}")));
+        }
+        if let Some(error) = payload.error {
+            return Err(error);
+        }
+        return Ok(payload
+            .message
+            .and_then(|message| message.content)
+            .unwrap_or_else(|| "No response content.".to_string()));
+    }
+
+    let response = auth_request(
+        &client,
+        reqwest::Method::POST,
+        format!("{root}/v1/chat/completions"),
+        &api_key,
+    )
+    .json(&serde_json::json!({
+        "model": model,
+        "messages": messages,
+        "stream": false
+    }))
+    .send()
+    .await
+    .map_err(|error| format!("Unable to contact provider: {error}"))?;
 
     let status = response.status();
-    let payload: OllamaResponse = response
+    let payload: OpenAiChatResponse = response
         .json()
         .await
-        .map_err(|error| format!("Invalid Ollama response: {error}"))?;
-
+        .map_err(|error| format!("Invalid provider response: {error}"))?;
     if !status.is_success() {
         return Err(payload
             .error
-            .unwrap_or_else(|| format!("Ollama returned HTTP {status}")));
-    }
-    if let Some(error) = payload.error {
-        return Err(error);
+            .map(|error| error.to_string())
+            .unwrap_or_else(|| format!("Provider returned HTTP {status}")));
     }
 
     Ok(payload
-        .message
-        .and_then(|message| message.content)
+        .choices
+        .into_iter()
+        .next()
+        .and_then(|choice| choice.message.content)
         .unwrap_or_else(|| "No response content.".to_string()))
 }
 
@@ -208,16 +342,10 @@ fn run_workspace_command(
     }
 
     #[cfg(target_os = "windows")]
-    let output = Command::new("cmd")
-        .args(["/C", &command])
-        .current_dir(&root)
-        .output();
+    let output = Command::new("cmd").args(["/C", &command]).current_dir(&root).output();
 
     #[cfg(not(target_os = "windows"))]
-    let output = Command::new("sh")
-        .args(["-lc", &command])
-        .current_dir(&root)
-        .output();
+    let output = Command::new("sh").args(["-lc", &command]).current_dir(&root).output();
 
     let output = output.map_err(|error| format!("Unable to start command: {error}"))?;
     let truncate = |value: Vec<u8>| {
@@ -244,7 +372,8 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
-            ollama_chat,
+            provider_chat,
+            list_provider_models,
             list_workspace,
             read_workspace_file,
             run_workspace_command
