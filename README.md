@@ -162,7 +162,6 @@ When the builder says `winget` is missing, install or update **App Installer** f
 - Chat cannot yet edit files automatically.
 - API keys are not saved between launches.
 - macOS support is paused.
-- WSL support has been removed.
 
 ## Project folders
 
