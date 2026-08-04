@@ -1,14 +1,64 @@
 # OmniTerm
 
-OmniTerm is an early native Windows desktop coding agent for Ollama. It includes a Tauri desktop interface, workspace browsing, text-file previews, a workspace-scoped terminal, and approval prompts for commands that may change a project or computer.
+OmniTerm is an early native Windows desktop coding agent. It includes AI provider selection, model discovery, workspace browsing, text-file previews, a workspace-scoped terminal, and approval prompts for commands that may change a project or computer.
 
 ## Project status
 
 OmniTerm is currently focused on Windows only.
 
-The repository contains source code. There is not yet a validated prebuilt Windows installer attached to the repository. The green **Code → Download ZIP** button downloads the source code, not a finished application.
+The repository contains source code. There is not yet a validated prebuilt Windows installer attached to the repository. The green **Code → Download ZIP** button downloads source code, not a finished application.
 
 GitHub Actions, macOS packaging, WSL launchers, and WSL installers have been removed while the native Windows application is being validated.
+
+## AI providers
+
+Provider setup now happens inside the OmniTerm window. You do not need to use a terminal to select a provider or model.
+
+Supported provider modes:
+
+- **OpenAI** — enter an OpenAI API key and load cloud models. Ollama is not required.
+- **Ollama** — use locally installed Ollama models.
+- **OpenAI-compatible** — connect to LM Studio, LocalAI, vLLM, or another compatible server.
+
+Inside OmniTerm:
+
+1. Select a provider.
+2. Confirm or change its endpoint.
+3. Enter an API key when the provider requires one.
+4. Select **Load models**.
+5. Choose a model from the returned list.
+6. Start chatting.
+
+API keys are kept in memory for the current application session and are not saved by OmniTerm.
+
+## No-Ollama setup
+
+To use OmniTerm without Ollama:
+
+1. Open OmniTerm.
+2. Select **OpenAI**.
+3. Enter your OpenAI API key.
+4. Select **Load models**.
+5. Choose a model.
+6. Enter a prompt and select **Send**.
+
+You can also select **OpenAI-compatible** and enter the endpoint of another compatible provider.
+
+## Optional local Ollama setup
+
+Ollama is now optional. To use local models:
+
+1. Install and start Ollama for Windows.
+2. Select **Ollama** inside OmniTerm.
+3. Leave the default endpoint as:
+
+```text
+http://127.0.0.1:11434
+```
+
+4. Select **Load models** to display models already installed in Ollama.
+
+OmniTerm does not currently download multi-gigabyte Ollama models automatically. Model installation remains managed by Ollama.
 
 ## Run OmniTerm on Windows from source
 
@@ -21,21 +71,8 @@ Install these once:
 - Rust stable toolchain
 - Microsoft Visual Studio Build Tools with **Desktop development with C++**
 - Microsoft Edge WebView2 Runtime
-- Ollama for Windows
 
-### Start Ollama
-
-Open PowerShell and install the default model:
-
-```powershell
-ollama pull qwen2.5-coder:7b
-```
-
-Confirm Ollama is available:
-
-```powershell
-ollama list
-```
+Ollama is not required when using OpenAI or another cloud provider.
 
 ### Start OmniTerm in development mode
 
@@ -47,7 +84,7 @@ npm install
 npm run tauri dev
 ```
 
-This opens the actual native OmniTerm desktop window. Keep the PowerShell window open while development mode is running.
+This opens the native OmniTerm desktop window. Keep PowerShell open while development mode is running.
 
 ## Build the Windows setup executable
 
@@ -57,7 +94,7 @@ From `apps\desktop`, run:
 npm run tauri build
 ```
 
-The configured Windows package type is NSIS. After a successful build, the real setup executable is written under:
+After a successful build, the real NSIS setup executable is written under:
 
 ```text
 apps\desktop\src-tauri\target\release\bundle\nsis\
@@ -69,42 +106,33 @@ The filename should end in:
 -setup.exe
 ```
 
-That generated `.exe` is the installer. Batch files, PowerShell files, source ZIPs, and repository scripts are not the finished application.
-
-The build has not yet been validated on a clean Windows machine, so do not assume an installer exists until `npm run tauri build` completes successfully and the file appears in the NSIS folder.
+That generated `.exe` is the installer. Source ZIPs and scripts are not the finished application.
 
 ## Use OmniTerm
 
 After launching the desktop window:
 
-1. Leave the Ollama endpoint as `http://127.0.0.1:11434` unless your setup is different.
-2. Leave the model as `qwen2.5-coder:7b`, or enter another model already installed in Ollama.
-3. Select **Choose workspace** and choose a project folder.
-4. Enter a prompt and select **Send**.
-5. Select files in the workspace browser to preview them.
-6. Use the terminal panel for workspace commands.
+1. Choose an AI provider and model.
+2. Select **Choose workspace** and choose a project folder.
+3. Enter a prompt and select **Send**.
+4. Select files in the workspace browser to preview them.
+5. Use the terminal panel only when you want to run workspace commands; it is not required for AI setup or normal chat.
 
 Recognized read-only commands can run automatically. Unknown or state-changing commands appear in the **Approvals** panel with **Cancel** and **Allow once** controls. Recognized destructive and privileged commands are blocked.
-
-## First test
-
-Try this prompt:
-
-```text
-Write a short Python hello-world program and explain each line.
-```
-
-A successful response confirms that OmniTerm can connect to the local Ollama service.
 
 ## What currently works
 
 - Native Windows desktop interface
-- Ollama chat through the Rust backend
-- Configurable Ollama model and endpoint
+- OpenAI cloud-provider connection
+- Ollama local-provider connection
+- Custom OpenAI-compatible endpoints
+- In-app provider selection
+- In-app model discovery and selection
+- Session-only API-key entry
 - Native workspace-folder picker
 - Workspace file browser
 - Text-file preview up to 1 MB
-- Workspace-scoped terminal commands
+- Optional workspace-scoped terminal commands
 - One-time approval prompts for state-changing commands
 - Blocking for recognized destructive and privileged commands
 
@@ -114,7 +142,8 @@ A successful response confirms that OmniTerm can connect to the local Ollama ser
 - The installer is not code-signed.
 - Chat does not yet autonomously invoke file or terminal tools.
 - File editing and unified-diff approval are not implemented yet.
-- Ollama must be installed separately.
+- Ollama model downloads are not managed by OmniTerm.
+- API keys are not persisted between application launches.
 - macOS support is paused.
 - WSL support has been removed.
 
@@ -137,10 +166,9 @@ This policy is an additional safeguard, not a complete security sandbox. Review 
 
 ## Roadmap
 
-- Run the native app successfully on Windows
+- Run and validate the native app on Windows
 - Produce and validate the first Windows setup executable
-- Test installation and launch on a clean Windows system
+- Store provider credentials securely with an OS-backed secret store
 - Let the chat agent request file and terminal tools
 - Show proposed edits and unified diffs before writing
-- Add BYOK providers and encrypted credential storage
 - Add persistent terminal sessions
