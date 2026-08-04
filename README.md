@@ -17,9 +17,44 @@ An installed user should not need Node.js, Rust, PowerShell, a terminal, or the 
 
 At the moment, this repository contains the application source code, but a validated prebuilt installer has not yet been uploaded. The green **Code → Download ZIP** button downloads source code, not the finished program.
 
-## How OmniTerm becomes a normal program
+## Build the real Windows installer with one double-click
 
-The Tauri project is already configured to produce a Windows NSIS installer. It needs to be compiled once on a Windows development machine.
+The repository includes this developer tool:
+
+```text
+BUILD-WINDOWS-INSTALLER.cmd
+```
+
+This batch file is **not OmniTerm itself**. It compiles the actual Windows setup executable.
+
+### One-time requirements for the build computer
+
+Install these once:
+
+- Windows 10 or Windows 11
+- Node.js 20 or newer
+- Rust stable toolchain
+- Microsoft Visual Studio Build Tools with **Desktop development with C++**
+- Microsoft Edge WebView2 Runtime
+
+### Build steps
+
+1. Download or clone the repository.
+2. Extract the entire ZIP if you downloaded the source ZIP.
+3. Double-click:
+
+```text
+BUILD-WINDOWS-INSTALLER.cmd
+```
+
+The builder will:
+
+1. Confirm that Node.js, npm, and Rust are available.
+2. Install the desktop JavaScript dependencies.
+3. Compile the Tauri application.
+4. Create the NSIS Windows setup executable.
+5. Open the output folder in File Explorer.
+6. Keep the command window open if the build fails.
 
 The generated installer is written under:
 
@@ -33,9 +68,20 @@ Its filename should end in:
 _x64-setup.exe
 ```
 
-That generated `.exe` should then be uploaded manually to the repository's **Releases** section.
+That generated `.exe` is the real installer normal users should run.
 
-After it is uploaded, normal users only download and run that installer. They do not compile OmniTerm themselves.
+## How OmniTerm becomes a normal downloadable program
+
+After `BUILD-WINDOWS-INSTALLER.cmd` succeeds:
+
+1. Run the generated `_x64-setup.exe` on your Windows computer.
+2. Confirm that installation completes.
+3. Open OmniTerm from the Start menu.
+4. Confirm that provider selection and chat work.
+5. Create a GitHub Release.
+6. Upload the generated `_x64-setup.exe` as a Release asset.
+
+After that, users only download and run the installer. They do not compile OmniTerm themselves.
 
 A GitHub source ZIP cannot automatically contain a newly compiled Windows program. The practical distribution choices are:
 
@@ -89,21 +135,9 @@ Ollama is optional. Users selecting OpenAI or another cloud provider do not need
 
 Recognized read-only commands can run automatically. Unknown or state-changing commands require approval. Recognized destructive and privileged commands are blocked.
 
-## Build the installer on a Windows development machine
+## Manual developer commands
 
-This section is only for the person producing the release installer. End users do not follow these steps.
-
-### One-time build requirements
-
-- Windows 10 or Windows 11
-- Node.js 20 or newer
-- Rust stable toolchain
-- Microsoft Visual Studio Build Tools with **Desktop development with C++**
-- Microsoft Edge WebView2 Runtime
-
-### Build
-
-Open PowerShell in the repository and run:
+The one-click builder runs these commands internally:
 
 ```powershell
 cd apps\desktop
@@ -111,19 +145,7 @@ npm install
 npm run tauri build
 ```
 
-After the build finishes, open:
-
-```text
-apps\desktop\src-tauri\target\release\bundle\nsis\
-```
-
-Test the generated `_x64-setup.exe` on Windows. Once installation and launch are confirmed, upload that file to a GitHub Release.
-
-This is a one-time task for each version. Everyone else installs and runs the resulting `.exe` normally.
-
-## Development mode
-
-Developers can run the application without creating an installer:
+Developers can run the application without creating an installer with:
 
 ```powershell
 cd apps\desktop
@@ -148,6 +170,7 @@ Development mode requires the terminal to remain open. The installed release ver
 - Optional workspace-scoped commands
 - One-time approval prompts for state-changing commands
 - Blocking for recognized destructive and privileged commands
+- One-click developer installer build script
 
 ## Current limitations
 
@@ -163,6 +186,7 @@ Development mode requires the terminal to remain open. The installed release ver
 ## Repository structure
 
 ```text
+BUILD-WINDOWS-INSTALLER.cmd      One-click developer installer builder
 apps/desktop/                    Tauri, React, and TypeScript desktop app
 apps/desktop/src/                Desktop interface
 apps/desktop/src-tauri/          Native Rust backend and Windows packaging
@@ -179,7 +203,8 @@ This policy is an additional safeguard, not a complete security sandbox. Review 
 
 ## Roadmap
 
-- Compile and validate the first Windows installer
+- Run `BUILD-WINDOWS-INSTALLER.cmd` on Windows
+- Validate the generated installer
 - Upload the installer to GitHub Releases
 - Test installation and launch on a clean Windows system
 - Store provider credentials securely with an OS-backed secret store
