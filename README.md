@@ -1,6 +1,6 @@
 # OmniTerm
 
-OmniTerm is a native Windows desktop coding assistant built with C# and .NET 8.
+OmniTerm is a native Windows desktop assistant built with C# and .NET 8.
 
 It supports direct API-key connections to:
 
