@@ -16,7 +16,7 @@
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel>
                     <TextBlock Text="OmniTerm" FontSize="28" FontWeight="Bold" />
-                    <TextBlock Text="Native Windows coding agent" Foreground="#9CA3AF" Margin="0,0,0,16" />
+                    <TextBlock Text="Native Windows assistant" Foreground="#9CA3AF" Margin="0,0,0,16" />
 
                     <TextBlock Text="AI provider" FontWeight="SemiBold" />
                     <ComboBox x:Name="ProviderCombo" SelectionChanged="ProviderCombo_SelectionChanged">
@@ -68,7 +68,7 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <TextBox x:Name="PromptBox" AcceptsReturn="True" Height="96" TextWrapping="Wrap"
-                             VerticalScrollBarVisibility="Auto" ToolTip="Ask OmniTerm a coding question" />
+                             VerticalScrollBarVisibility="Auto" ToolTip="Ask OmniTerm anything" />
                     <Button Grid.Column="1" Content="Send" Width="90" Click="Send_Click" />
                 </Grid>
             </Grid>
