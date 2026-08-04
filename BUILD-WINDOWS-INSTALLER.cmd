@@ -5,6 +5,10 @@ title OmniTerm Windows Installer Builder
 
 set "DESKTOP_DIR=%~dp0apps\desktop"
 set "OUTPUT_DIR=%DESKTOP_DIR%\src-tauri\target\release\bundle\nsis"
+set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
+set "VSINSTALLER=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\setup.exe"
+set "VS_PATH="
+set "VSDEVCMD="
 set "NEEDS_RESTART=0"
 
 echo ============================================================
@@ -44,10 +48,10 @@ if errorlevel 1 goto :failed
 call :install_if_missing cargo "Rustlang.Rustup" "Rust"
 if errorlevel 1 goto :failed
 
-call :install_package_if_missing "Microsoft.VisualStudio.2022.BuildTools" "Visual Studio 2022 Build Tools" "--override \"--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended\""
+call :ensure_cpp_build_tools
 if errorlevel 1 goto :failed
 
-call :install_package_if_missing "Microsoft.EdgeWebView2Runtime" "Microsoft Edge WebView2 Runtime" ""
+call :install_package_if_missing "Microsoft.EdgeWebView2Runtime" "Microsoft Edge WebView2 Runtime"
 if errorlevel 1 goto :failed
 
 rem Refresh PATH for tools installed during this run.
@@ -77,6 +81,25 @@ if "%NEEDS_RESTART%"=="1" (
   goto :failed
 )
 
+if not defined VSDEVCMD (
+  echo ERROR: The Visual Studio C++ build environment could not be located.
+  goto :failed
+)
+
+echo Loading Microsoft C++ build environment...
+call "%VSDEVCMD%" -arch=x64 -host_arch=x64 >nul
+if errorlevel 1 (
+  echo ERROR: Visual Studio could not initialize its C++ build environment.
+  goto :failed
+)
+
+where link.exe >nul 2>&1
+if errorlevel 1 (
+  echo ERROR: Microsoft C++ linker link.exe is still unavailable.
+  echo Restart Windows, then run this builder again.
+  goto :failed
+)
+
 echo.
 echo Build tools ready:
 echo.
@@ -86,6 +109,8 @@ echo npm:
 call npm --version
 echo Rust:
 cargo --version
+echo Microsoft linker:
+where link.exe
 echo.
 
 echo Installing OmniTerm desktop dependencies...
@@ -105,9 +130,6 @@ if errorlevel 1 (
   popd
   echo.
   echo ERROR: The OmniTerm Windows build failed.
-  echo.
-  echo Restart Windows and try the builder one more time if the
-  echo Visual Studio Build Tools were installed during this run.
   goto :failed
 )
 popd
@@ -171,16 +193,63 @@ if not errorlevel 1 (
 )
 
 echo Installing %~2...
-if "%~3"=="" (
-  winget install --id %~1 --exact --source winget --accept-package-agreements --accept-source-agreements --silent
-) else (
-  winget install --id %~1 --exact --source winget --accept-package-agreements --accept-source-agreements --silent %~3
-)
+winget install --id %~1 --exact --source winget --accept-package-agreements --accept-source-agreements --silent
 if errorlevel 1 (
   echo.
   echo ERROR: Windows could not install %~2 automatically.
   exit /b 1
 )
+exit /b 0
+
+:ensure_cpp_build_tools
+if exist "%VSWHERE%" (
+  for /f "usebackq tokens=*" %%I in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VS_PATH=%%I"
+)
+
+if defined VS_PATH (
+  set "VSDEVCMD=%VS_PATH%\Common7\Tools\VsDevCmd.bat"
+  if exist "!VSDEVCMD!" (
+    echo Visual Studio C++ Build Tools are already installed.
+    exit /b 0
+  )
+)
+
+echo Installing or repairing Visual Studio C++ Build Tools...
+
+if exist "%VSWHERE%" (
+  for /f "usebackq tokens=*" %%I in (`"%VSWHERE%" -latest -products * -property installationPath`) do set "VS_PATH=%%I"
+)
+
+if defined VS_PATH if exist "%VSINSTALLER%" (
+  "%VSINSTALLER%" modify --installPath "%VS_PATH%" --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --passive --norestart
+) else (
+  winget install --id Microsoft.VisualStudio.2022.BuildTools --exact --source winget --accept-package-agreements --accept-source-agreements --override "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --norestart"
+)
+
+if errorlevel 1 (
+  echo.
+  echo ERROR: Windows could not install the Visual C++ build tools.
+  exit /b 1
+)
+
+set "VS_PATH="
+if exist "%VSWHERE%" (
+  for /f "usebackq tokens=*" %%I in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VS_PATH=%%I"
+)
+
+if not defined VS_PATH (
+  echo.
+  echo ERROR: The C++ workload installation did not complete.
+  echo Restart Windows and run this builder again.
+  exit /b 1
+)
+
+set "VSDEVCMD=%VS_PATH%\Common7\Tools\VsDevCmd.bat"
+if not exist "!VSDEVCMD!" (
+  echo ERROR: VsDevCmd.bat was not found after installation.
+  exit /b 1
+)
+
 exit /b 0
 
 :failed
