@@ -1,213 +1,157 @@
 # OmniTerm
 
-OmniTerm is an early native Windows desktop coding agent. It includes in-app AI provider selection, model discovery, workspace browsing, file previews, optional workspace commands, and approval prompts for actions that may change a project.
+OmniTerm is a Windows desktop app that lets you chat with an AI model while working with files in a project folder.
 
-## Windows application status
+You can use:
 
-OmniTerm is currently focused on Windows only.
+- OpenAI
+- Ollama
+- Other services that support the OpenAI API format
 
-The intended finished experience is a normal Windows application:
+You choose the provider and model inside the app. You do not need to use a terminal for normal use.
 
-1. Download an installer named similar to `OmniTerm_0.1.0_x64-setup.exe`.
-2. Double-click the installer.
-3. Complete the setup wizard.
-4. Open **OmniTerm** from the Windows Start menu.
+## Current status
 
-An installed user should not need Node.js, Rust, PowerShell, a terminal, or the source repository.
+OmniTerm is still being prepared for its first public Windows installer.
 
-At the moment, this repository contains the application source code, but a validated prebuilt installer has not yet been uploaded. The green **Code → Download ZIP** button downloads source code, not the finished program.
+The repository currently contains the source code. A finished installer has not been uploaded yet.
 
-## Build the real Windows installer with one double-click
+Do not use **Code → Download ZIP** if you only want to install OmniTerm. That ZIP contains the project files, not the finished app.
 
-The repository includes this developer tool:
+## For normal users
+
+Once the first installer is ready, installation will work like this:
+
+1. Open the repository's **Releases** page.
+2. Download the file ending in:
+
+```text
+_x64-setup.exe
+```
+
+3. Double-click the downloaded file.
+4. Follow the installation steps.
+5. Open **OmniTerm** from the Windows Start menu.
+
+Normal users will not need Node.js, Rust, PowerShell, or any build tools.
+
+## How to use OmniTerm
+
+After opening the app:
+
+1. Choose an AI provider.
+2. Enter an API key if that provider requires one.
+3. Select **Load models**.
+4. Choose a model.
+5. Select **Choose workspace** and pick a project folder.
+6. Type a message and select **Send**.
+
+You can also select files in the workspace browser to preview them.
+
+The command panel is optional. You do not need it for provider setup or normal chat.
+
+## AI provider choices
+
+### OpenAI
+
+Choose **OpenAI**, enter your API key, load the models, and select one.
+
+Ollama is not required when using OpenAI.
+
+### Ollama
+
+Choose **Ollama** to use models running locally on your computer.
+
+Ollama must already be installed and running. OmniTerm can show the models that are already available in Ollama, but it does not currently download large model files for you.
+
+### OpenAI-compatible
+
+Choose **OpenAI-compatible** to connect to software such as LM Studio, LocalAI, or vLLM.
+
+Enter the server address and an API key when required.
+
+## Privacy and API keys
+
+API keys are currently kept only while OmniTerm is open.
+
+They are not saved between app launches.
+
+## What OmniTerm can currently do
+
+- Chat with OpenAI, Ollama, and compatible providers
+- Load available models inside the app
+- Open a project folder
+- Browse project files
+- Preview text files
+- Run optional commands inside the selected project
+- Ask for approval before commands that may change files
+- Block recognized destructive or privileged commands
+
+## For the developer: create the Windows installer
+
+This section is only for the person building OmniTerm. Normal users do not need to do this.
+
+The repository includes:
 
 ```text
 BUILD-WINDOWS-INSTALLER.cmd
 ```
 
-This batch file is **not OmniTerm itself**. It compiles the actual Windows setup executable.
+This file is a builder. It is not the OmniTerm app.
 
-### One-time requirements for the build computer
+### Before running the builder
 
-Install these once:
+The Windows build computer needs:
 
-- Windows 10 or Windows 11
 - Node.js 20 or newer
-- Rust stable toolchain
+- Rust
 - Microsoft Visual Studio Build Tools with **Desktop development with C++**
 - Microsoft Edge WebView2 Runtime
 
-### Build steps
+### Build the installer
 
 1. Download or clone the repository.
-2. Extract the entire ZIP if you downloaded the source ZIP.
+2. Extract the ZIP completely if needed.
 3. Double-click:
 
 ```text
 BUILD-WINDOWS-INSTALLER.cmd
 ```
 
-The builder will:
+The builder will install the project dependencies, compile OmniTerm, and open the folder containing the finished installer.
 
-1. Confirm that Node.js, npm, and Rust are available.
-2. Install the desktop JavaScript dependencies.
-3. Compile the Tauri application.
-4. Create the NSIS Windows setup executable.
-5. Open the output folder in File Explorer.
-6. Keep the command window open if the build fails.
-
-The generated installer is written under:
+The installer will be created under:
 
 ```text
 apps\desktop\src-tauri\target\release\bundle\nsis\
 ```
 
-Its filename should end in:
+Look for a file ending in:
 
 ```text
 _x64-setup.exe
 ```
 
-That generated `.exe` is the real installer normal users should run.
+That `.exe` is the real Windows installer.
 
-## How OmniTerm becomes a normal downloadable program
+Test it on Windows, confirm OmniTerm opens correctly, and then upload it to a GitHub Release so normal users can download it.
 
-After `BUILD-WINDOWS-INSTALLER.cmd` succeeds:
+## Important notes
 
-1. Run the generated `_x64-setup.exe` on your Windows computer.
-2. Confirm that installation completes.
-3. Open OmniTerm from the Start menu.
-4. Confirm that provider selection and chat work.
-5. Create a GitHub Release.
-6. Upload the generated `_x64-setup.exe` as a Release asset.
-
-After that, users only download and run the installer. They do not compile OmniTerm themselves.
-
-A GitHub source ZIP cannot automatically contain a newly compiled Windows program. The practical distribution choices are:
-
-- Upload the compiled installer as a GitHub Release asset — recommended.
-- Host the installer on a separate download page.
-- Commit the binary directly into the repository — not recommended because binaries make the repository large and difficult to maintain.
-
-## Install OmniTerm
-
-This section applies after the first validated installer has been uploaded.
-
-1. Open the repository's **Releases** section.
-2. Open the newest Windows release.
-3. Under **Assets**, download the file ending in `_x64-setup.exe`.
-4. Double-click it and complete installation.
-5. Launch **OmniTerm** from the Start menu.
-
-The preview installer is not currently code-signed, so Windows SmartScreen may display a warning. Only run an installer downloaded from this repository's official Releases section.
-
-## AI providers
-
-Provider setup happens inside OmniTerm. A terminal is not required.
-
-Supported modes:
-
-- **OpenAI** — enter an OpenAI API key and load available cloud models.
-- **Ollama** — use locally installed Ollama models.
-- **OpenAI-compatible** — connect to LM Studio, LocalAI, vLLM, or another compatible server.
-
-Inside the application:
-
-1. Select a provider.
-2. Confirm or change its endpoint.
-3. Enter an API key when required.
-4. Select **Load models**.
-5. Choose a model.
-6. Start chatting.
-
-API keys currently remain in memory for the active session and are not saved by OmniTerm.
-
-Ollama is optional. Users selecting OpenAI or another cloud provider do not need to install or download Ollama models.
-
-## Use OmniTerm
-
-1. Open OmniTerm from the Start menu.
-2. Choose an AI provider and model.
-3. Select **Choose workspace** and choose a project folder.
-4. Enter a prompt and select **Send**.
-5. Select files in the workspace browser to preview them.
-6. Use the command panel only when needed; it is not required for provider setup or normal chat.
-
-Recognized read-only commands can run automatically. Unknown or state-changing commands require approval. Recognized destructive and privileged commands are blocked.
-
-## Manual developer commands
-
-The one-click builder runs these commands internally:
-
-```powershell
-cd apps\desktop
-npm install
-npm run tauri build
-```
-
-Developers can run the application without creating an installer with:
-
-```powershell
-cd apps\desktop
-npm install
-npm run tauri dev
-```
-
-Development mode requires the terminal to remain open. The installed release version does not.
-
-## What currently works
-
-- Native Windows desktop interface
-- OpenAI provider connection
-- Ollama provider connection
-- Custom OpenAI-compatible endpoints
-- In-app provider selection
-- In-app model discovery and selection
-- Session-only API-key entry
-- Native workspace-folder picker
-- Workspace file browser
-- Text-file preview up to 1 MB
-- Optional workspace-scoped commands
-- One-time approval prompts for state-changing commands
-- Blocking for recognized destructive and privileged commands
-- One-click developer installer build script
-
-## Current limitations
-
-- The first Windows installer still needs to be compiled and validated on a Windows machine.
-- No validated installer is currently attached to Releases.
-- The installer is not code-signed.
-- Chat does not yet autonomously invoke file or command tools.
-- File editing and unified-diff approval are not implemented yet.
-- API keys are not persisted between launches.
+- The first Windows installer has not yet been validated.
+- The installer is not code-signed, so Windows SmartScreen may show a warning.
+- Chat cannot yet edit files automatically.
+- API keys are not saved between launches.
 - macOS support is paused.
 - WSL support has been removed.
 
-## Repository structure
+## Project folders
 
 ```text
-BUILD-WINDOWS-INSTALLER.cmd      One-click developer installer builder
-apps/desktop/                    Tauri, React, and TypeScript desktop app
-apps/desktop/src/                Desktop interface
-apps/desktop/src-tauri/          Native Rust backend and Windows packaging
-src/omniterm/                    Original Python CLI runtime
-tests/                           Runtime safety tests
-pyproject.toml                   Python package configuration
+BUILD-WINDOWS-INSTALLER.cmd      Builds the Windows installer
+apps/desktop/                    Windows desktop app
+apps/desktop/src/                App interface
+apps/desktop/src-tauri/          Native Windows backend and installer setup
+src/omniterm/                    Older Python command-line code
+tests/                           Safety tests
 ```
-
-## Safety model
-
-OmniTerm operates inside a user-selected workspace. The desktop backend canonicalizes workspace paths before reading files or starting commands. Read-only commands can run automatically, unknown or state-changing commands require explicit approval, and recognized destructive or privileged commands are blocked.
-
-This policy is an additional safeguard, not a complete security sandbox. Review commands before approving them and avoid selecting folders containing sensitive material.
-
-## Roadmap
-
-- Run `BUILD-WINDOWS-INSTALLER.cmd` on Windows
-- Validate the generated installer
-- Upload the installer to GitHub Releases
-- Test installation and launch on a clean Windows system
-- Store provider credentials securely with an OS-backed secret store
-- Let the chat agent request file and command tools
-- Show proposed edits and unified diffs before writing
-- Add persistent command sessions
