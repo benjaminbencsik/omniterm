@@ -2,20 +2,21 @@
 
 OmniTerm is a native Windows desktop coding assistant built with C# and .NET 8.
 
-It can connect to:
+It supports direct API-key connections to:
 
 - OpenAI
-- Ollama
-- OpenAI-compatible servers such as LM Studio, LocalAI, and vLLM
+- Anthropic
+- Google Gemini
 
 OmniTerm can open a project folder, preview files, chat with a selected model, and run optional workspace commands with approval prompts.
 
 ## Features
 
 - Native Windows interface using WPF
-- OpenAI chat and model discovery
-- Ollama chat and model discovery
-- OpenAI-compatible endpoints
+- Direct OpenAI API support
+- Direct Anthropic API support
+- Direct Google Gemini API support
+- Provider-specific model discovery
 - Session-only API key entry
 - Workspace folder selection
 - Workspace file browser
@@ -27,13 +28,12 @@ OmniTerm can open a project folder, preview files, chat with a selected model, a
 ## Using OmniTerm
 
 1. Open `OmniTerm.exe`.
-2. Choose an AI provider.
-3. Confirm the endpoint.
-4. Enter an API key when required.
-5. Select **Load models**.
-6. Choose a model.
-7. Select **Choose workspace** and pick a project folder.
-8. Enter a message and select **Send**.
+2. Choose **OpenAI**, **Anthropic**, or **Google Gemini**.
+3. Enter the API key for that provider.
+4. Select **Load models**.
+5. Choose a model.
+6. Select **Choose workspace** and pick a project folder.
+7. Enter a message and select **Send**.
 
 API keys are kept only in memory while OmniTerm is open and are not saved between launches.
 
@@ -43,13 +43,23 @@ API keys are kept only in memory while OmniTerm is open and are not saved betwee
 
 Choose **OpenAI**, enter an OpenAI API key, load the available models, and select one.
 
-### Ollama
+### Anthropic
 
-Choose **Ollama** to use locally installed models. Ollama must already be installed and running.
+Choose **Anthropic**, enter an Anthropic API key, load the available Claude models, and select one.
 
-### OpenAI-compatible
+### Google Gemini
 
-Choose **OpenAI-compatible** for LM Studio, LocalAI, vLLM, or another compatible server. Enter the server's `/v1` endpoint and an API key when required.
+Choose **Google Gemini**, enter a Gemini API key from Google AI Studio, load the available Gemini models, and select one.
+
+## Run from the repository
+
+On Windows, download and extract the repository ZIP, then double-click:
+
+```text
+RUN-OMNITERM.cmd
+```
+
+The launcher installs the .NET 8 SDK with Windows Package Manager when needed, builds the app, and opens OmniTerm.
 
 ## Development
 
@@ -79,6 +89,7 @@ dotnet publish apps/desktop-dotnet/OmniTerm.csproj `
 ## Repository structure
 
 ```text
+RUN-OMNITERM.cmd                 Windows build-and-run launcher
 apps/desktop-dotnet/             C#/.NET Windows app
 .github/workflows/               GitHub Actions build workflow
 apps/desktop/                    Previous Tauri prototype
