@@ -1,11 +1,11 @@
-name: Build Windows Installer
+name: Build Windows App
 
 on:
   push:
     branches:
       - main
     paths:
-      - "apps/desktop/**"
+      - "apps/desktop-dotnet/**"
       - ".github/workflows/build-windows-installer.yml"
   workflow_dispatch:
 
@@ -13,53 +13,56 @@ permissions:
   contents: read
 
 concurrency:
-  group: windows-installer-${{ github.ref }}
+  group: windows-dotnet-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-windows-installer:
-    name: Build OmniTerm Windows installer
+  build-windows-app:
+    name: Build OmniTerm .NET app
     runs-on: windows-latest
-
-    defaults:
-      run:
-        working-directory: apps/desktop
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
         with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: apps/desktop/package.json
+          dotnet-version: "8.0.x"
 
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Restore project
+        run: dotnet restore apps/desktop-dotnet/OmniTerm.csproj
 
-      - name: Cache Rust build files
-        uses: swatinem/rust-cache@v2
-        with:
-          workspaces: apps/desktop/src-tauri -> target
+      - name: Build project
+        run: dotnet build apps/desktop-dotnet/OmniTerm.csproj --configuration Release --no-restore
 
-      - name: Install desktop dependencies
-        run: npm install
+      - name: Publish self-contained Windows app
+        run: >-
+          dotnet publish apps/desktop-dotnet/OmniTerm.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          --output artifacts/OmniTerm
+          -p:PublishSingleFile=true
+          -p:DebugType=None
+          -p:DebugSymbols=false
 
-      - name: Build NSIS installer
-        run: npm run tauri build
-
-      - name: Show generated installer files
+      - name: Verify executable
         shell: pwsh
         run: |
-          Get-ChildItem -Path "src-tauri/target/release/bundle" -Recurse -File |
-            Select-Object FullName, Length
+          if (-not (Test-Path "artifacts/OmniTerm/OmniTerm.exe")) {
+            throw "OmniTerm.exe was not produced."
+          }
+          Get-ChildItem "artifacts/OmniTerm" -File | Select-Object Name, Length
 
-      - name: Upload Windows installer
+      - name: Create download ZIP
+        shell: pwsh
+        run: Compress-Archive -Path "artifacts/OmniTerm/*" -DestinationPath "artifacts/OmniTerm-Windows-x64.zip" -Force
+
+      - name: Upload Windows app
         uses: actions/upload-artifact@v4
         with:
-          name: OmniTerm-Windows-Installer
-          path: apps/desktop/src-tauri/target/release/bundle/nsis/*-setup.exe
+          name: OmniTerm-Windows-x64
+          path: artifacts/OmniTerm-Windows-x64.zip
           if-no-files-found: error
           retention-days: 30
