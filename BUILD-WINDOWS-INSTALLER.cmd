@@ -9,7 +9,7 @@ set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
 set "VSINSTALLER=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\setup.exe"
 set "VS_PATH="
 set "VSDEVCMD="
-set "NEEDS_RESTART=0"
+set "NEEDS_REOPEN=0"
 
 echo ============================================================
 echo OmniTerm Windows Installer Builder
@@ -38,7 +38,7 @@ if errorlevel 1 (
   echo ERROR: Windows Package Manager ^(winget^) was not found.
   echo.
   echo Install or update "App Installer" from the Microsoft Store,
-  echo restart Windows, and run this builder again.
+  echo reopen this folder, and run this builder again.
   goto :failed
 )
 
@@ -54,30 +54,19 @@ if errorlevel 1 goto :failed
 call :install_package_if_missing "Microsoft.EdgeWebView2Runtime" "Microsoft Edge WebView2 Runtime"
 if errorlevel 1 goto :failed
 
-rem Refresh PATH for tools installed during this run.
 set "PATH=%ProgramFiles%\nodejs;%USERPROFILE%\.cargo\bin;%PATH%"
 
 where node >nul 2>&1
-if errorlevel 1 (
-  echo ERROR: Node.js was installed, but Windows has not made it available yet.
-  set "NEEDS_RESTART=1"
-)
-
+if errorlevel 1 set "NEEDS_REOPEN=1"
 where npm >nul 2>&1
-if errorlevel 1 (
-  echo ERROR: npm was installed, but Windows has not made it available yet.
-  set "NEEDS_RESTART=1"
-)
-
+if errorlevel 1 set "NEEDS_REOPEN=1"
 where cargo >nul 2>&1
-if errorlevel 1 (
-  echo ERROR: Rust was installed, but Windows has not made it available yet.
-  set "NEEDS_RESTART=1"
-)
+if errorlevel 1 set "NEEDS_REOPEN=1"
 
-if "%NEEDS_RESTART%"=="1" (
+if "%NEEDS_REOPEN%"=="1" (
   echo.
-  echo Restart Windows, then double-click this builder again.
+  echo One or more tools were installed but are not visible in this window yet.
+  echo Close this builder and double-click it again. A PC restart is not required.
   goto :failed
 )
 
@@ -95,8 +84,11 @@ if errorlevel 1 (
 
 where link.exe >nul 2>&1
 if errorlevel 1 (
-  echo ERROR: Microsoft C++ linker link.exe is still unavailable.
-  echo Restart Windows, then run this builder again.
+  echo ERROR: Microsoft C++ linker link.exe is unavailable.
+  echo.
+  echo Open Visual Studio Installer, choose Modify for Build Tools 2022,
+  echo check "Desktop development with C++", then run this builder again.
+  echo A Windows restart is not required.
   goto :failed
 )
 
@@ -201,56 +193,71 @@ if errorlevel 1 (
 )
 exit /b 0
 
-:ensure_cpp_build_tools
+:find_vs_environment
+set "VS_PATH="
+set "VSDEVCMD="
+
 if exist "%VSWHERE%" (
   for /f "usebackq tokens=*" %%I in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VS_PATH=%%I"
 )
 
-if defined VS_PATH (
-  set "VSDEVCMD=%VS_PATH%\Common7\Tools\VsDevCmd.bat"
-  if exist "!VSDEVCMD!" (
+if not defined VS_PATH if exist "%VSWHERE%" (
+  for /f "usebackq tokens=*" %%I in (`"%VSWHERE%" -latest -products * -property installationPath`) do (
+    if exist "%%I\Common7\Tools\VsDevCmd.bat" set "VS_PATH=%%I"
+  )
+)
+
+if defined VS_PATH set "VSDEVCMD=%VS_PATH%\Common7\Tools\VsDevCmd.bat"
+exit /b 0
+
+:ensure_cpp_build_tools
+call :find_vs_environment
+
+if defined VSDEVCMD if exist "!VSDEVCMD!" (
+  call "!VSDEVCMD!" -arch=x64 -host_arch=x64 >nul 2>&1
+  where link.exe >nul 2>&1
+  if not errorlevel 1 (
     echo Visual Studio C++ Build Tools are already installed.
     exit /b 0
   )
 )
 
 echo Installing or repairing Visual Studio C++ Build Tools...
-
-if exist "%VSWHERE%" (
-  for /f "usebackq tokens=*" %%I in (`"%VSWHERE%" -latest -products * -property installationPath`) do set "VS_PATH=%%I"
-)
+set "INSTALL_EXIT=0"
 
 if defined VS_PATH if exist "%VSINSTALLER%" (
   "%VSINSTALLER%" modify --installPath "%VS_PATH%" --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --passive --norestart
+  set "INSTALL_EXIT=!errorlevel!"
 ) else (
   winget install --id Microsoft.VisualStudio.2022.BuildTools --exact --source winget --accept-package-agreements --accept-source-agreements --override "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --norestart"
+  set "INSTALL_EXIT=!errorlevel!"
 )
 
-if errorlevel 1 (
-  echo.
-  echo ERROR: Windows could not install the Visual C++ build tools.
-  exit /b 1
+rem Exit code 3010 means installation succeeded and Windows suggests a restart.
+rem We do not require one; we verify the compiler directly below.
+if not "!INSTALL_EXIT!"=="0" if not "!INSTALL_EXIT!"=="3010" (
+  echo Visual Studio installer returned code !INSTALL_EXIT!.
+  echo Checking whether the C++ tools were installed anyway...
 )
 
-set "VS_PATH="
-if exist "%VSWHERE%" (
-  for /f "usebackq tokens=*" %%I in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VS_PATH=%%I"
+call :find_vs_environment
+if defined VSDEVCMD if exist "!VSDEVCMD!" (
+  call "!VSDEVCMD!" -arch=x64 -host_arch=x64 >nul 2>&1
+  where link.exe >nul 2>&1
+  if not errorlevel 1 (
+    echo Visual Studio C++ Build Tools are ready.
+    exit /b 0
+  )
 )
 
-if not defined VS_PATH (
-  echo.
-  echo ERROR: The C++ workload installation did not complete.
-  echo Restart Windows and run this builder again.
-  exit /b 1
-)
-
-set "VSDEVCMD=%VS_PATH%\Common7\Tools\VsDevCmd.bat"
-if not exist "!VSDEVCMD!" (
-  echo ERROR: VsDevCmd.bat was not found after installation.
-  exit /b 1
-)
-
-exit /b 0
+echo.
+echo ERROR: The C++ workload is still missing.
+echo.
+echo No restart is needed. Open Visual Studio Installer now, choose
+ echo Modify for Build Tools 2022, check "Desktop development with C++",
+echo and let it finish. Then run this builder again.
+start "" "%VSINSTALLER%"
+exit /b 1
 
 :failed
 echo.
