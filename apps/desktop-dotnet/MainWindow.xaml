@@ -21,12 +21,12 @@
                     <TextBlock Text="AI provider" FontWeight="SemiBold" />
                     <ComboBox x:Name="ProviderCombo" SelectionChanged="ProviderCombo_SelectionChanged">
                         <ComboBoxItem Content="OpenAI" Tag="openai" IsSelected="True" />
-                        <ComboBoxItem Content="Ollama" Tag="ollama" />
-                        <ComboBoxItem Content="OpenAI-compatible" Tag="compatible" />
+                        <ComboBoxItem Content="Anthropic" Tag="anthropic" />
+                        <ComboBoxItem Content="Google Gemini" Tag="gemini" />
                     </ComboBox>
 
-                    <TextBlock Text="Endpoint" FontWeight="SemiBold" Margin="0,8,0,0" />
-                    <TextBox x:Name="EndpointBox" Text="https://api.openai.com/v1" />
+                    <TextBlock Text="API endpoint" FontWeight="SemiBold" Margin="0,8,0,0" />
+                    <TextBox x:Name="EndpointBox" Text="https://api.openai.com/v1" IsReadOnly="True" />
 
                     <TextBlock Text="API key" FontWeight="SemiBold" Margin="0,8,0,0" />
                     <PasswordBox x:Name="ApiKeyBox" Margin="4" Padding="6" />
