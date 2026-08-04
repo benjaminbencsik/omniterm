@@ -99,26 +99,39 @@ BUILD-WINDOWS-INSTALLER.cmd
 
 This file is a builder. It is not the OmniTerm app.
 
-### Before running the builder
+### What the builder installs
 
-The Windows build computer needs:
+The builder now uses Windows Package Manager to install missing build tools automatically:
 
-- Node.js 20 or newer
+- Node.js LTS and npm
 - Rust
-- Microsoft Visual Studio Build Tools with **Desktop development with C++**
+- Microsoft Visual Studio 2022 Build Tools
+- The Desktop development with C++ workload
 - Microsoft Edge WebView2 Runtime
+
+Windows may ask for administrator permission during installation. A restart may be required after Visual Studio Build Tools or Rust is installed.
 
 ### Build the installer
 
-1. Download or clone the repository.
-2. Extract the ZIP completely if needed.
-3. Double-click:
+1. Download the repository ZIP.
+2. Right-click the ZIP and choose **Extract All**.
+3. Open the extracted `omniterm-main` folder.
+4. Double-click:
 
 ```text
 BUILD-WINDOWS-INSTALLER.cmd
 ```
 
-The builder will install the project dependencies, compile OmniTerm, and open the folder containing the finished installer.
+Do not double-click the builder while browsing inside the ZIP. Windows runs ZIP files from a temporary folder, and the builder cannot find the rest of the project there.
+
+The builder will:
+
+1. Check for Windows Package Manager.
+2. Install any missing build tools.
+3. Install the OmniTerm project dependencies.
+4. Compile the Windows application.
+5. Create the real setup `.exe`.
+6. Open the installer folder in File Explorer.
 
 The installer will be created under:
 
@@ -136,6 +149,12 @@ That `.exe` is the real Windows installer.
 
 Test it on Windows, confirm OmniTerm opens correctly, and then upload it to a GitHub Release so normal users can download it.
 
+### If Windows Package Manager is missing
+
+The builder requires `winget`, which is normally included with modern Windows 10 and Windows 11 through Microsoft App Installer.
+
+When the builder says `winget` is missing, install or update **App Installer** from the Microsoft Store, restart Windows, and run the builder again.
+
 ## Important notes
 
 - The first Windows installer has not yet been validated.
@@ -148,7 +167,7 @@ Test it on Windows, confirm OmniTerm opens correctly, and then upload it to a Gi
 ## Project folders
 
 ```text
-BUILD-WINDOWS-INSTALLER.cmd      Builds the Windows installer
+BUILD-WINDOWS-INSTALLER.cmd      Installs build tools and builds the Windows installer
 apps/desktop/                    Windows desktop app
 apps/desktop/src/                App interface
 apps/desktop/src-tauri/          Native Windows backend and installer setup
