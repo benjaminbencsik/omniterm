@@ -1,80 +1,70 @@
 @echo off
-setlocal EnableExtensions
+setlocal EnableExtensions EnableDelayedExpansion
 cd /d "%~dp0"
-title OmniTerm .NET Launcher
+title OmniTerm Launcher
+
+set "LOG=%~dp0OMNITERM-ERROR.txt"
+>"%LOG%" echo OmniTerm launcher log
+>>"%LOG%" echo Started: %date% %time%
+>>"%LOG%" echo Folder: %CD%
+>>"%LOG%" echo.
 
 echo ============================================================
-echo OmniTerm .NET Launcher
+echo OmniTerm Launcher
 echo ============================================================
 echo.
 
 if not exist "apps\desktop-dotnet\OmniTerm.csproj" (
-  echo ERROR: The OmniTerm .NET project was not found.
-  echo Extract the full repository ZIP before running this file.
-  echo.
-  pause
-  exit /b 1
+  call :fail "The OmniTerm project was not found. Extract the entire ZIP before running this file."
 )
 
-where dotnet >nul 2>&1
+where dotnet >>"%LOG%" 2>&1
 if errorlevel 1 (
-  echo .NET 8 SDK is not installed.
-  echo Installing it now with Windows Package Manager...
-  echo.
+  echo .NET 8 SDK was not found. Installing it now...
+  >>"%LOG%" echo .NET SDK not found on PATH.
 
-  where winget >nul 2>&1
+  where winget >>"%LOG%" 2>&1
   if errorlevel 1 (
-    echo ERROR: winget is not available.
-    echo Install or update App Installer from the Microsoft Store,
-    echo then run this file again.
-    echo.
-    pause
-    exit /b 1
+    call :fail "Windows Package Manager (winget) is unavailable. Install Microsoft App Installer from the Microsoft Store, then run this file again."
   )
 
-  winget install --id Microsoft.DotNet.SDK.8 --exact --source winget --accept-package-agreements --accept-source-agreements
-  if errorlevel 1 (
-    echo.
-    echo ERROR: The .NET 8 SDK installation failed.
-    pause
-    exit /b 1
-  )
+  winget install --id Microsoft.DotNet.SDK.8 --exact --source winget --accept-package-agreements --accept-source-agreements >>"%LOG%" 2>&1
+  if errorlevel 1 call :fail "The .NET 8 SDK installation failed."
 
   set "PATH=%ProgramFiles%\dotnet;%PATH%"
 )
 
 echo Checking .NET...
-dotnet --version
-if errorlevel 1 (
-  echo.
-  echo ERROR: dotnet is still not available.
-  echo Close this window and run RUN-OMNITERM.cmd again.
-  pause
-  exit /b 1
-)
+dotnet --info >>"%LOG%" 2>&1
+if errorlevel 1 call :fail "dotnet is installed but could not start. Restart Windows and run this file again."
 
-echo.
 echo Restoring OmniTerm...
-dotnet restore "apps\desktop-dotnet\OmniTerm.csproj"
-if errorlevel 1 goto :failed
+dotnet restore "apps\desktop-dotnet\OmniTerm.csproj" >>"%LOG%" 2>&1
+if errorlevel 1 call :fail "Project restore failed."
 
-echo.
 echo Building OmniTerm...
-dotnet build "apps\desktop-dotnet\OmniTerm.csproj" --configuration Release --no-restore
-if errorlevel 1 goto :failed
+dotnet build "apps\desktop-dotnet\OmniTerm.csproj" --configuration Release --no-restore >>"%LOG%" 2>&1
+if errorlevel 1 call :fail "Project build failed."
 
-echo.
 echo Starting OmniTerm...
-dotnet run --project "apps\desktop-dotnet\OmniTerm.csproj" --configuration Release --no-build
-exit /b %errorlevel%
+dotnet run --project "apps\desktop-dotnet\OmniTerm.csproj" --configuration Release --no-build >>"%LOG%" 2>&1
+if errorlevel 1 call :fail "OmniTerm built but failed while starting."
 
-:failed
+del "%LOG%" >nul 2>&1
+exit /b 0
+
+:fail
 echo.
 echo ============================================================
-echo OMNITERM COULD NOT BUILD
+echo OMNITERM DID NOT START
 echo ============================================================
+echo %~1
 echo.
-echo Copy the error lines above and send them back for repair.
+echo The complete error was saved here:
+echo %LOG%
 echo.
+>>"%LOG%" echo.
+>>"%LOG%" echo FINAL ERROR: %~1
+start "" notepad.exe "%LOG%"
 pause
 exit /b 1
