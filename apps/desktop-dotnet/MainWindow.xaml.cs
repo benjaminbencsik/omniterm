@@ -18,42 +18,60 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        AddMessage("assistant", "Welcome to OmniTerm. Choose a provider and model, then send a coding task.");
+        AddMessage("assistant", "Welcome to OmniTerm. Choose OpenAI, Anthropic, or Google Gemini, then enter your API key and load models.");
     }
 
     private string Provider => ((ProviderCombo.SelectedItem as ComboBoxItem)?.Tag as string) ?? "openai";
     private string Endpoint => EndpointBox.Text.Trim().TrimEnd('/');
     private string Model => ModelCombo.Text.Trim();
+    private string ApiKey => ApiKeyBox.Password.Trim();
 
     private void ProviderCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (!IsLoaded) return;
+
+        ModelCombo.Items.Clear();
+        ApiKeyBox.Clear();
+
         switch (Provider)
         {
-            case "ollama":
-                EndpointBox.Text = "http://127.0.0.1:11434";
-                ModelCombo.Text = "qwen2.5-coder:7b";
-                ApiKeyBox.Clear();
+            case "anthropic":
+                EndpointBox.Text = "https://api.anthropic.com/v1";
+                ModelCombo.Text = "claude-sonnet-4-5";
                 break;
-            case "compatible":
-                EndpointBox.Text = "http://127.0.0.1:1234/v1";
-                ModelCombo.Text = string.Empty;
+            case "gemini":
+                EndpointBox.Text = "https://generativelanguage.googleapis.com/v1beta";
+                ModelCombo.Text = "gemini-2.5-flash";
                 break;
             default:
                 EndpointBox.Text = "https://api.openai.com/v1";
                 ModelCombo.Text = "gpt-5-mini";
                 break;
         }
-        SetStatus("Provider changed. Load models when ready.");
+
+        SetStatus("Provider changed. Enter an API key and load models.");
     }
 
     private async void LoadModels_Click(object sender, RoutedEventArgs e)
     {
+        if (string.IsNullOrWhiteSpace(ApiKey))
+        {
+            SetStatus("Enter an API key first.");
+            return;
+        }
+
         try
         {
             SetBusy("Loading models...");
             ModelCombo.Items.Clear();
-            var models = Provider == "ollama" ? await LoadOllamaModelsAsync() : await LoadOpenAiModelsAsync();
+
+            var models = Provider switch
+            {
+                "anthropic" => await LoadAnthropicModelsAsync(),
+                "gemini" => await LoadGeminiModelsAsync(),
+                _ => await LoadOpenAiModelsAsync()
+            };
+
             foreach (var model in models) ModelCombo.Items.Add(model);
             if (models.Count > 0) ModelCombo.SelectedIndex = 0;
             SetStatus(models.Count == 0 ? "Connected, but no models were returned." : $"Loaded {models.Count} model(s).");
@@ -67,10 +85,11 @@ public partial class MainWindow : Window
     private async Task<List<string>> LoadOpenAiModelsAsync()
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, $"{Endpoint}/models");
-        AddAuthorization(request);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ApiKey);
         using var response = await _http.SendAsync(request);
         var text = await response.Content.ReadAsStringAsync();
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode) throw new InvalidOperationException(text);
+
         using var document = JsonDocument.Parse(text);
         return document.RootElement.GetProperty("data").EnumerateArray()
             .Select(item => item.GetProperty("id").GetString())
@@ -80,14 +99,37 @@ public partial class MainWindow : Window
             .ToList();
     }
 
-    private async Task<List<string>> LoadOllamaModelsAsync()
+    private async Task<List<string>> LoadAnthropicModelsAsync()
     {
-        using var response = await _http.GetAsync($"{Endpoint}/api/tags");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"{Endpoint}/models?limit=100");
+        request.Headers.Add("x-api-key", ApiKey);
+        request.Headers.Add("anthropic-version", "2023-06-01");
+        using var response = await _http.SendAsync(request);
         var text = await response.Content.ReadAsStringAsync();
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode) throw new InvalidOperationException(text);
+
+        using var document = JsonDocument.Parse(text);
+        return document.RootElement.GetProperty("data").EnumerateArray()
+            .Select(item => item.GetProperty("id").GetString())
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Cast<string>()
+            .OrderBy(id => id)
+            .ToList();
+    }
+
+    private async Task<List<string>> LoadGeminiModelsAsync()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"{Endpoint}/models?pageSize=1000");
+        request.Headers.Add("x-goog-api-key", ApiKey);
+        using var response = await _http.SendAsync(request);
+        var text = await response.Content.ReadAsStringAsync();
+        if (!response.IsSuccessStatusCode) throw new InvalidOperationException(text);
+
         using var document = JsonDocument.Parse(text);
         return document.RootElement.GetProperty("models").EnumerateArray()
-            .Select(item => item.GetProperty("name").GetString())
+            .Where(item => item.TryGetProperty("supportedGenerationMethods", out var methods)
+                           && methods.EnumerateArray().Any(method => method.GetString() == "generateContent"))
+            .Select(item => item.GetProperty("name").GetString()?.Replace("models/", string.Empty, StringComparison.Ordinal))
             .Where(name => !string.IsNullOrWhiteSpace(name))
             .Cast<string>()
             .OrderBy(name => name)
@@ -98,6 +140,11 @@ public partial class MainWindow : Window
     {
         var prompt = PromptBox.Text.Trim();
         if (string.IsNullOrWhiteSpace(prompt) || string.IsNullOrWhiteSpace(Model)) return;
+        if (string.IsNullOrWhiteSpace(ApiKey))
+        {
+            SetStatus("Enter an API key first.");
+            return;
+        }
 
         AddMessage("user", prompt);
         PromptBox.Clear();
@@ -105,7 +152,12 @@ public partial class MainWindow : Window
         try
         {
             SetBusy("OmniTerm is working...");
-            var reply = Provider == "ollama" ? await SendOllamaChatAsync() : await SendOpenAiChatAsync();
+            var reply = Provider switch
+            {
+                "anthropic" => await SendAnthropicChatAsync(),
+                "gemini" => await SendGeminiChatAsync(),
+                _ => await SendOpenAiChatAsync()
+            };
             AddMessage("assistant", reply);
             SetStatus("Ready");
         }
@@ -123,39 +175,84 @@ public partial class MainWindow : Window
             model = Model,
             messages = _messages.Select(message => new { role = message.Role, content = message.Content })
         });
+
         using var request = new HttpRequestMessage(HttpMethod.Post, $"{Endpoint}/chat/completions")
         {
             Content = new StringContent(payload, Encoding.UTF8, "application/json")
         };
-        AddAuthorization(request);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ApiKey);
+
         using var response = await _http.SendAsync(request);
         var text = await response.Content.ReadAsStringAsync();
         if (!response.IsSuccessStatusCode) throw new InvalidOperationException(text);
+
         using var document = JsonDocument.Parse(text);
         return document.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString()
-               ?? "The provider returned an empty response.";
+               ?? "OpenAI returned an empty response.";
     }
 
-    private async Task<string> SendOllamaChatAsync()
+    private async Task<string> SendAnthropicChatAsync()
     {
         var payload = JsonSerializer.Serialize(new
         {
             model = Model,
-            stream = false,
-            messages = _messages.Select(message => new { role = message.Role, content = message.Content })
+            max_tokens = 4096,
+            messages = _messages.Select(message => new
+            {
+                role = message.Role == "assistant" ? "assistant" : "user",
+                content = message.Content
+            })
         });
-        using var response = await _http.PostAsync($"{Endpoint}/api/chat", new StringContent(payload, Encoding.UTF8, "application/json"));
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{Endpoint}/messages")
+        {
+            Content = new StringContent(payload, Encoding.UTF8, "application/json")
+        };
+        request.Headers.Add("x-api-key", ApiKey);
+        request.Headers.Add("anthropic-version", "2023-06-01");
+
+        using var response = await _http.SendAsync(request);
         var text = await response.Content.ReadAsStringAsync();
         if (!response.IsSuccessStatusCode) throw new InvalidOperationException(text);
+
         using var document = JsonDocument.Parse(text);
-        return document.RootElement.GetProperty("message").GetProperty("content").GetString()
-               ?? "Ollama returned an empty response.";
+        var parts = document.RootElement.GetProperty("content").EnumerateArray()
+            .Where(item => item.TryGetProperty("type", out var type) && type.GetString() == "text")
+            .Select(item => item.GetProperty("text").GetString())
+            .Where(value => !string.IsNullOrWhiteSpace(value));
+        return string.Join("\n", parts) is { Length: > 0 } result
+            ? result
+            : "Anthropic returned an empty response.";
     }
 
-    private void AddAuthorization(HttpRequestMessage request)
+    private async Task<string> SendGeminiChatAsync()
     {
-        var key = ApiKeyBox.Password.Trim();
-        if (!string.IsNullOrWhiteSpace(key)) request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", key);
+        var contents = _messages.Select(message => new
+        {
+            role = message.Role == "assistant" ? "model" : "user",
+            parts = new[] { new { text = message.Content } }
+        });
+
+        var payload = JsonSerializer.Serialize(new { contents });
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{Endpoint}/models/{Uri.EscapeDataString(Model)}:generateContent")
+        {
+            Content = new StringContent(payload, Encoding.UTF8, "application/json")
+        };
+        request.Headers.Add("x-goog-api-key", ApiKey);
+
+        using var response = await _http.SendAsync(request);
+        var text = await response.Content.ReadAsStringAsync();
+        if (!response.IsSuccessStatusCode) throw new InvalidOperationException(text);
+
+        using var document = JsonDocument.Parse(text);
+        var parts = document.RootElement.GetProperty("candidates")[0]
+            .GetProperty("content").GetProperty("parts").EnumerateArray()
+            .Where(item => item.TryGetProperty("text", out _))
+            .Select(item => item.GetProperty("text").GetString())
+            .Where(value => !string.IsNullOrWhiteSpace(value));
+        return string.Join("\n", parts) is { Length: > 0 } result
+            ? result
+            : "Gemini returned an empty response.";
     }
 
     private void AddMessage(string role, string content)
@@ -193,6 +290,7 @@ public partial class MainWindow : Window
         FileList.Items.Clear();
         FilePreview.Clear();
         if (_workspace is null) return;
+
         try
         {
             foreach (var file in Directory.EnumerateFiles(_workspace, "*", SearchOption.AllDirectories).Take(1000))
@@ -210,6 +308,7 @@ public partial class MainWindow : Window
     private async void FileList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (FileList.SelectedItem is not WorkspaceFile selected) return;
+
         try
         {
             var info = new FileInfo(selected.FullPath);
